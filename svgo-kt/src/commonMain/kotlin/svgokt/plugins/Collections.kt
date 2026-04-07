@@ -97,6 +97,12 @@ private object ElementGroups {
 }
 
 object Collections {
+    /**
+     * SVG container elements - elements that can contain child elements.
+     * Empty container elements (with no children) are generally safe to remove.
+     */
+    val containerElements: Set<String> = ElementGroups.container
+
     val textElements: Set<String> = buildSet {
         addAll(ElementGroups.textContent)
         add("pre")
