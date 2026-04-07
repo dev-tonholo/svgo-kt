@@ -1,12 +1,10 @@
 package svgokt.domain
 
-import kotlin.jvm.JvmInline
-
-@JvmInline
-value class DataUri private constructor(val value: String) {
-    companion object {
-        val Base64 = "base64"
-        val Enc = "enc"
-        val UnEnc = "unenc"
-    }
+enum class DataUri(val value: String) {
+    /** Encode as base64 data URI. */
+    Base64(value = "base64"),
+    /** Encode as URL-encoded (percent-encoded) data URI. */
+    Enc(value = "enc"),
+    /** Encode as minimally-encoded (unencoded) data URI. */
+    UnEnc(value = "unenc"),
 }

@@ -6,6 +6,7 @@ import svgokt.domain.plugins.Plugin
 import svgokt.domain.plugins.PluginConfig
 import svgokt.domain.plugins.PluginInfo
 import svgokt.domain.plugins.PluginParams
+import svgokt.encoding.encodeSvgDataUri
 import svgokt.parser.SvgoParser
 import svgokt.plugins.PresetDefault
 import svgokt.plugins.invokePlugins
@@ -62,8 +63,8 @@ internal class SvgoImpl(
             }
         }
 
-        if (config?.dataUri != null) {
-            output = "dataUri" /*encodeSVGDatauri(output, config.datauri)*/
+        overrideConfig.dataUri?.let { dataUri ->
+            output = encodeSvgDataUri(svg = output, type = dataUri)
         }
 
         return Output(
