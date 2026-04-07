@@ -3,7 +3,6 @@ package svgokt.parser
 import kotlinx.coroutines.test.runTest
 import svgokt.TestFixtures
 import svgokt.domain.XastCdata
-import svgokt.domain.XastChild
 import svgokt.domain.XastComment
 import svgokt.domain.XastElement
 import svgokt.domain.XastInstruction

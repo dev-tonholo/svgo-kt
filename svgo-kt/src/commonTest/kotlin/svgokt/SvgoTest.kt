@@ -20,7 +20,7 @@ class SvgoTest {
         val optimizer = svgo { }
         val result = optimizer.optimize(input = TestFixtures.SIMPLE_SVG)
         assertTrue(result.data.contains("<svg"), "Output should contain an SVG element")
-        assertTrue(result.data.contains("</svg>") || result.data.contains("/>"), "Output should have a closing SVG tag")
+        assertTrue(result.data.contains("</svg>"), "Output should have a closing SVG tag")
     }
 
     @Test
@@ -45,6 +45,6 @@ class SvgoTest {
         val result = optimizer.optimize(input = TestFixtures.PARSER_TEST_SVG)
         assertTrue(result.data.isNotEmpty(), "Output data should not be empty")
         assertTrue(result.data.contains("<svg"), "Output should contain an SVG element")
-        assertTrue(result.data.contains("<circle") || result.data.contains("circle"), "Output should preserve circle element")
+        assertTrue(result.data.contains("<circle"), "Output should preserve circle element")
     }
 }

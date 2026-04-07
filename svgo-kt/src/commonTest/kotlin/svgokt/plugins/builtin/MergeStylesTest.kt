@@ -66,5 +66,9 @@ class MergeStylesTest {
             actual = result.data.contains("foreignObject"),
             message = "Expected <foreignObject> to still be present in: ${result.data}",
         )
+        assertTrue(
+            actual = result.data.contains(".foreign{color:blue}"),
+            message = "Expected inner foreignObject style '.foreign{color:blue}' to remain unmerged in: ${result.data}",
+        )
     }
 }

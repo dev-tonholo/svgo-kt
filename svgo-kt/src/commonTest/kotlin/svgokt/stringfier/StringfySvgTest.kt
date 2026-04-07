@@ -7,6 +7,7 @@ import svgokt.domain.builder.stringifyOptions
 import svgokt.parser.SvgoParser
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class StringfySvgTest {
@@ -92,8 +93,10 @@ class StringfySvgTest {
         assertTrue(
             message = "Round-trip output should preserve attributes",
         ) { result2.contains("viewBox=\"0 0 100 100\"") }
-        assertTrue(
-            message = "Round-trip output should be structurally equivalent to first stringify",
-        ) { result == result2 }
+        assertEquals(
+            expected = result,
+            actual = result2,
+            message = "Round-trip output should be identical",
+        )
     }
 }
