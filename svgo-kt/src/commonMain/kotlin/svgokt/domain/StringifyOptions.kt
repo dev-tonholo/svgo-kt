@@ -2,6 +2,11 @@ package svgokt.domain
 
 typealias EncodeEntityFn = (char: Char) -> String
 
+sealed interface Indent {
+    data class Spaces(val count: Int) : Indent
+    data class Custom(val value: String) : Indent
+}
+
 data class StringifyOptions(
     val doctypeStart: String?,
     val doctypeEnd: String?,
@@ -21,7 +26,7 @@ data class StringifyOptions(
     val cdataEnd: String?,
     val textStart: String?,
     val textEnd: String?,
-    val indent: Int?,
+    val indent: Indent?,
     val regEntities: Regex?,
     val regValEntities: Regex?,
     val encodeEntity: EncodeEntityFn?,

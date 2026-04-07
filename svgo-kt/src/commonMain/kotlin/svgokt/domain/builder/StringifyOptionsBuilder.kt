@@ -2,6 +2,7 @@ package svgokt.domain.builder
 
 import svgokt.domain.EncodeEntityFn
 import svgokt.domain.EndOfLine
+import svgokt.domain.Indent
 import svgokt.domain.StringifyOptions
 
 fun stringifyOptions(block: StringifyOptionsBuilder.() -> Unit): StringifyOptions =
@@ -31,6 +32,7 @@ class StringifyOptionsBuilder {
     var textStart: String? = null
     var textEnd: String? = null
     var indent: Int? = null
+    var customIndent: String? = null
     var regEntities: Regex? = null
     var regValEntities: Regex? = null
     private var encodeEntity: EncodeEntityFn? = null
@@ -62,7 +64,8 @@ class StringifyOptionsBuilder {
         cdataEnd = cdataEnd,
         textStart = textStart,
         textEnd = textEnd,
-        indent = indent,
+        indent = customIndent?.let { Indent.Custom(value = it) }
+            ?: indent?.let { Indent.Spaces(count = it) },
         regEntities = regEntities,
         regValEntities = regValEntities,
         encodeEntity = encodeEntity,

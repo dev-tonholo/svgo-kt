@@ -1,6 +1,7 @@
 package svgokt.stringfier
 
 import svgokt.domain.EndOfLine
+import svgokt.domain.Indent
 import svgokt.domain.StringifyOptions
 import svgokt.domain.XastCdata
 import svgokt.domain.XastComment
@@ -63,11 +64,10 @@ private data class State(
  */
 fun stringifySvg(data: XastRoot, userOptions: StringifyOptions?): String {
     var config = defaults.merge(userOptions)
-    val indent = config.indent
-    val newIndent = when {
-        indent != null && indent < 0 -> "\t"
-        indent != null && indent > 0 -> " ".repeat(indent)
-        else -> "    "
+    val newIndent = when (val indent = config.indent) {
+        is Indent.Spaces -> if (indent.count < 0) "\t" else " ".repeat(indent.count)
+        is Indent.Custom -> indent.value
+        null -> "    "
     }
 
     val state = State(
