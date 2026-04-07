@@ -3,7 +3,9 @@ package svgokt
 import svgokt.domain.Config
 import svgokt.domain.Output
 import svgokt.domain.plugins.Plugin
+import svgokt.domain.plugins.PluginConfig
 import svgokt.domain.plugins.PluginInfo
+import svgokt.domain.plugins.PluginParams
 import svgokt.parser.SvgoParser
 import svgokt.plugins.PresetDefault
 import svgokt.plugins.invokePlugins
@@ -34,7 +36,7 @@ internal class SvgoImpl(
         for (i in 0 until maxPassCount) {
             info = info.copy(multipassCount = i)
             val ast = SvgoParser().parseSvg(data = currentInput, from = overrideConfig.path)
-            val plugins = overrideConfig.plugins ?: listOf("preset-default") // TODO plugins.
+            val plugins = overrideConfig.plugins ?: listOf(PluginConfig.BuiltinByName(name = "preset-default"))
             val resolvedPlugins = plugins.mapNotNull(::resolvePluginConfig)
             if (resolvedPlugins.size < plugins.size) {
                 println(
@@ -69,26 +71,28 @@ internal class SvgoImpl(
         )
     }
 
-    private fun resolvePluginConfig(plugin: Any): Plugin<*>? {
-        val unknownBuiltinPluginMessage = "Unknown builtin plugin \"${plugin}\" specified."
-        if (plugin is String) {
-            // resolve builtin plugin specified as string
-            return pluginMap[plugin] ?: error(unknownBuiltinPluginMessage)
-        }
-
-        if (plugin is Plugin<*>) {
-            if (plugin.name.isNullOrEmpty()) {
-                error("Plugin name should be specified")
+    private fun resolvePluginConfig(pluginConfig: PluginConfig): Plugin<*>? {
+        return when (pluginConfig) {
+            is PluginConfig.BuiltinByName -> {
+                pluginMap[pluginConfig.name]
+                    ?: error("Unknown builtin plugin \"${pluginConfig.name}\" specified.")
             }
-
-            // use custom plugin implementation
-            // If no fn function provided, resolve builtin plugin implementation
-            plugin.fn ?: return pluginMap[plugin.name] ?: error(unknownBuiltinPluginMessage)
-
-            return plugin
+            is PluginConfig.BuiltinWithParams<*> -> {
+                pluginMap[pluginConfig.name]
+                    ?: error("Unknown builtin plugin \"${pluginConfig.name}\" specified.")
+            }
+            is PluginConfig.Custom<*> -> {
+                if (pluginConfig.name.isEmpty()) {
+                    error("Plugin name should be specified")
+                }
+                object : Plugin<PluginParams> {
+                    override val name = pluginConfig.name
+                    override val description = null
+                    override val params = pluginConfig.params
+                    override val fn = pluginConfig.fn
+                }
+            }
         }
-
-        return null
     }
 
     override fun toString(): String = "Svgo(defaultConfig = $defaultConfig)"

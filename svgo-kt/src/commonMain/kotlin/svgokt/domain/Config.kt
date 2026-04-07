@@ -1,4 +1,6 @@
-package svgokt.domain;
+package svgokt.domain
+
+import svgokt.domain.plugins.PluginConfig
 
 data class Config(
     /**
@@ -18,7 +20,7 @@ data class Config(
      * [{ name: 'myPlugin', fn: () => ({}) }]
      * TODO.
      */
-    val plugins: List<Any>? = null,
+    val plugins: List<PluginConfig>? = null,
     /** Options for rendering optimized SVG from AST. */
     val js2svg: StringifyOptions? = null,
     /** Output as Data URI string. */

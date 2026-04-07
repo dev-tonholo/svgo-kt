@@ -19,3 +19,18 @@ interface Plugin<T : PluginParams> {
     val params: T?
     val fn: PluginFn?
 }
+
+sealed interface PluginConfig {
+    data class BuiltinByName(val name: String) : PluginConfig
+
+    data class BuiltinWithParams<T : PluginParams>(
+        val name: String,
+        val params: T,
+    ) : PluginConfig
+
+    data class Custom<T : PluginParams>(
+        val name: String,
+        val fn: PluginFn,
+        val params: T? = null,
+    ) : PluginConfig
+}
