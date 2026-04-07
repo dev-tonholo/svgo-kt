@@ -1,8 +1,8 @@
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTargetWithHostTests
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinJsTargetDsl
 
-fun KotlinMultiplatformExtension.createSvgoKtNativePlatforms(): List<KotlinNativeTargetWithHostTests> {
+fun KotlinMultiplatformExtension.createSvgoKtNativePlatforms(): List<KotlinNativeTarget> {
     val macosTargets = listOf(
         macosArm64(),
         macosX64(),
@@ -18,7 +18,7 @@ fun KotlinMultiplatformExtension.createSvgoKtNativePlatforms(): List<KotlinNativ
 }
 
 fun KotlinMultiplatformExtension.createJsPlatform(moduleName: String): KotlinJsTargetDsl = js {
-    this.moduleName = moduleName
+    this.outputModuleName.set(moduleName)
     binaries.executable()
     nodejs()
     browser {
