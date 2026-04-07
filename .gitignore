@@ -234,4 +234,5 @@ $RECYCLE.BIN/
 .claude/*.local.json
 .superpowers
 **/superpowers/**
+.worktrees/
 
