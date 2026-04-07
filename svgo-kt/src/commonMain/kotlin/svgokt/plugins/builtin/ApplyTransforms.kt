@@ -8,6 +8,7 @@ import svgokt.domain.plugins.Visitor
 import svgokt.domain.plugins.VisitorNode
 import svgokt.plugins.Collections
 import svgokt.plugins.xast.collectStylesheet
+import svgokt.style.computeStyle
 
 data class ApplyTransformsPrams(
     val transformPrecision: Int,
@@ -50,7 +51,7 @@ fun applyTransforms(root: XastRoot, params: ApplyTransformsPrams): Visitor? {
                     return@VisitorNode VisitState.Continue
                 }
 
-                val computedStyles = computeStyles(stylesheet, node)
+                val computedStyles = computeStyle(stylesheet, node)
 
                 VisitState.Continue
             }

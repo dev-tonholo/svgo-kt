@@ -11,9 +11,9 @@ fun computeOwnStyle(stylesheet: Stylesheet, node: XastElement): ComputedStyles {
 
     }
 
-    return ComputedStyles.DynamicStyle() // TODO
+    return ComputedStyles.DynamicStyle(inherited = false) // TODO: implement properly
 }
+
 fun computeStyle(stylesheet: Stylesheet, node: XastElement): ComputedStyles {
-    val (_, parents) = stylesheet
-    val computedStyles = computeOwnStyle(stylesheet, node)
+    return computeOwnStyle(stylesheet, node) // TODO: implement inherited style resolution
 }
