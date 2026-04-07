@@ -79,8 +79,11 @@ class StringfySvgTest {
         val root = parser.parseSvg(data = TestFixtures.SIMPLE_SVG, from = null)
         val result = stringifySvg(data = root, userOptions = stringifyOptions { })
 
-        // Round-trip: parse the stringified output and stringify again
-        val root2 = parser.parseSvg(data = result, from = null)
+        // Round-trip: parse the stringified output and stringify again.
+        // A fresh SvgoParser instance is required because the parser cannot be reused
+        // after close() is called internally when the first parse completes.
+        val parser2 = SvgoParser()
+        val root2 = parser2.parseSvg(data = result, from = null)
         val result2 = stringifySvg(data = root2, userOptions = stringifyOptions { })
 
         assertTrue(

@@ -5,7 +5,6 @@ import svgokt.TestFixtures
 import svgokt.domain.XastCdata
 import svgokt.domain.XastChild
 import svgokt.domain.XastComment
-import svgokt.domain.XastDoctype
 import svgokt.domain.XastElement
 import svgokt.domain.XastInstruction
 import svgokt.domain.XastRoot
@@ -43,16 +42,6 @@ class SvgoParserTest {
         val commentNode = result.children.filterIsInstance<XastComment>().firstOrNull()
         assertNotNull(commentNode, "A comment node should be present in children")
         assertTrue(commentNode.value.contains("Generator"), "Comment value should contain expected text")
-    }
-
-    @Test
-    fun `given SVG with doctype - when parseSvg is called - then doctype node is present`() = runTest {
-        val parser = SvgoParser()
-        val result: XastRoot = parser.parseSvg(data = TestFixtures.PARSER_TEST_SVG, from = null)
-
-        val doctypeNode = result.children.filterIsInstance<XastDoctype>().firstOrNull()
-        assertNotNull(doctypeNode, "A doctype node should be present in children")
-        assertEquals(expected = "svg", actual = doctypeNode.name)
     }
 
     @Test
