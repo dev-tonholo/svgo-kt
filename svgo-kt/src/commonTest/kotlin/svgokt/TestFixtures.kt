@@ -175,8 +175,8 @@ object TestFixtures {
     """.trimMargin()
 
     val REMOVE_UNUSED_NS_USED = """
-        |<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100">
-        |<image xlink:href="image.png" width="100" height="100"/>
+        |<svg xmlns="http://www.w3.org/2000/svg" xmlns:custom="http://example.com/custom" viewBox="0 0 100 100">
+        |<custom:shape width="100" height="100"/>
         |</svg>
     """.trimMargin()
 }
