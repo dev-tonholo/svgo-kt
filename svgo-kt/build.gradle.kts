@@ -32,6 +32,10 @@ kotlin {
     }
 }
 
+tasks.withType<Test>().configureEach {
+    maxHeapSize = "4g"
+}
+
 detekt {
     autoCorrect = true
     buildUponDefaultConfig = true // preconfigure defaults
