@@ -85,38 +85,21 @@ object RemoveAttributesBySelector : Plugin<RemoveAttributesBySelector.Params> {
         attributes: Map<String, String>,
         selector: String,
     ): Boolean {
-        var remaining = selector.trim()
-
-        // Extract element name prefix if present
-        val bracketIndex = remaining.indexOf('[')
-        val elemPart = if (bracketIndex > 0) {
-            remaining.substring(startIndex = 0, endIndex = bracketIndex)
-        } else if (bracketIndex < 0) {
-            remaining
-        } else {
-            null
+        val trimmed = selector.trim()
+        val bracketIndex = trimmed.indexOf('[')
+        val elemPart = when {
+            bracketIndex > 0 -> trimmed.substring(startIndex = 0, endIndex = bracketIndex)
+            bracketIndex < 0 -> trimmed
+            else -> null
         }
 
-        if (elemPart != null && elemPart.isNotEmpty() && elemPart != elementName) {
-            return false
-        }
+        val elementMatches = elemPart == null || elemPart.isEmpty() || elemPart == elementName
+        if (!elementMatches) return false
 
-        if (bracketIndex >= 0) {
-            remaining = remaining.substring(startIndex = bracketIndex)
-        } else {
-            return elemPart != null
+        val attrPart = if (bracketIndex >= 0) trimmed.substring(startIndex = bracketIndex) else ""
+        return attrPart.isEmpty() || ATTR_SELECTOR_REGEX.findAll(attrPart).all { match ->
+            attributes[match.groupValues[1]] == match.groupValues[2]
         }
-
-        // Check all attribute selectors
-        val matches = ATTR_SELECTOR_REGEX.findAll(remaining)
-        for (match in matches) {
-            val attrName = match.groupValues[1]
-            val attrValue = match.groupValues[2]
-            if (attributes[attrName] != attrValue) {
-                return false
-            }
-        }
-        return true
     }
 
     @Suppress("UNCHECKED_CAST")

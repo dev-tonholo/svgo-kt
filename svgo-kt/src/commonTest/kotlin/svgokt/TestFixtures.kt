@@ -179,4 +179,209 @@ object TestFixtures {
         |<custom:shape width="100" height="100"/>
         |</svg>
     """.trimMargin()
+
+    // language=svg
+    val REMOVE_TITLE_WITH_TITLE = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<title>My SVG</title>
+        |<rect width="100" height="100" fill="red"/>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val REMOVE_TITLE_WITHOUT_TITLE = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<rect width="100" height="100" fill="red"/>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val REMOVE_VIEWBOX_MATCHING = """
+        |<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50" viewBox="0 0 100 50">
+        |<rect width="100" height="50" fill="red"/>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val REMOVE_VIEWBOX_NON_MATCHING = """
+        |<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50" viewBox="0 0 200 100">
+        |<rect width="100" height="50" fill="red"/>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val REMOVE_XMLNS_WITH_XMLNS = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<rect width="100" height="100" fill="red"/>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val REMOVE_STYLE_ELEMENT_WITH_STYLE = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<style>.st0{fill:red}</style>
+        |<rect class="st0" width="100" height="100"/>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val REMOVE_SCRIPTS_WITH_SCRIPT = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<script>alert('hello')</script>
+        |<rect width="100" height="100" fill="red" onclick="doSomething()"/>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val REMOVE_RASTER_IMAGES_WITH_PNG = """
+        |<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100">
+        |<image xlink:href="data:image/png;base64,abc123"/>
+        |<rect width="100" height="100" fill="red"/>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val REMOVE_RASTER_IMAGES_SVG_ONLY = """
+        |<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100">
+        |<image xlink:href="data:image/svg+xml;base64,abc123"/>
+        |<rect width="100" height="100" fill="red"/>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val REMOVE_ATTRS_WITH_FILL = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<rect width="100" height="100" fill="red" stroke="blue"/>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val ADD_ATTRS_SVG = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<rect width="100" height="100" fill="red"/>
+        |</svg>
+    """.trimMargin()
+
+    // -- AddClassesToSVGElement --
+
+    // language=svg
+    val ADD_CLASSES_SIMPLE = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<rect width="100" height="100" fill="red"/>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val ADD_CLASSES_EXISTING = """
+        |<svg xmlns="http://www.w3.org/2000/svg" class="existing" viewBox="0 0 100 100">
+        |<rect width="100" height="100" fill="red"/>
+        |</svg>
+    """.trimMargin()
+
+    // -- RemoveAttributesBySelector --
+
+    // language=svg
+    val REMOVE_ATTRS_BY_SELECTOR = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<rect x="0" y="0" width="100" height="100" fill="#00ff00" stroke="#00ff00"/>
+        |</svg>
+    """.trimMargin()
+
+    // -- PrefixIds --
+
+    // language=svg
+    val PREFIX_IDS_SIMPLE = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<defs><linearGradient id="grad1"/></defs>
+        |<rect id="myRect" fill="url(#grad1)" width="100" height="100"/>
+        |</svg>
+    """.trimMargin()
+
+    // -- RemoveOffCanvasPaths --
+
+    // language=svg
+    val REMOVE_OFF_CANVAS_OUTSIDE = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<path d="M200 200 L300 300"/>
+        |<rect width="100" height="100" fill="red"/>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val REMOVE_OFF_CANVAS_INSIDE = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<path d="M50 50 L80 80"/>
+        |<rect width="100" height="100" fill="red"/>
+        |</svg>
+    """.trimMargin()
+
+    // -- ConvertStyleToAttrs --
+
+    // language=svg
+    val CONVERT_STYLE_TO_ATTRS = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<g style="fill:#000;stroke:blue">
+        |<rect width="100" height="100"/>
+        |</g>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val CONVERT_STYLE_TO_ATTRS_NO_OVERRIDE = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<rect style="fill:red;stroke:blue" fill="green" width="100" height="100"/>
+        |</svg>
+    """.trimMargin()
+
+    // -- CleanupListOfValues --
+
+    // language=svg
+    val CLEANUP_LIST_VALUES_VIEWBOX = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200.28423 200.28423">
+        |<rect width="100" height="100" fill="red"/>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val CLEANUP_LIST_VALUES_POINTS = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<polygon points="208.250977 77.1308594 223.069336 95.0800781"/>
+        |</svg>
+    """.trimMargin()
+
+    // -- ReusePaths --
+
+    // language=svg
+    val REUSE_PATHS_DUPLICATES = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<path d="M0 0L10 10" fill="red"/>
+        |<path d="M0 0L10 10" fill="red"/>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val REUSE_PATHS_UNIQUE = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<path d="M0 0L10 10" fill="red"/>
+        |<path d="M20 20L30 30" fill="blue"/>
+        |</svg>
+    """.trimMargin()
+
+    // -- ConvertOneStopGradients --
+
+    // language=svg
+    val ONE_STOP_GRADIENT = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<defs><linearGradient id="g1"><stop stop-color="red"/></linearGradient></defs>
+        |<rect fill="url(#g1)" width="100" height="100"/>
+        |</svg>
+    """.trimMargin()
+
+    // language=svg
+    val TWO_STOP_GRADIENT = """
+        |<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        |<defs><linearGradient id="g1"><stop stop-color="red"/><stop stop-color="blue"/></linearGradient></defs>
+        |<rect fill="url(#g1)" width="100" height="100"/>
+        |</svg>
+    """.trimMargin()
 }

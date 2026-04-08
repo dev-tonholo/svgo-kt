@@ -46,7 +46,7 @@ object PrefixIds : Plugin<PrefixIds.Params> {
     private const val DEFAULT_DELIM = "__"
     private const val FALLBACK_PREFIX = "prefix"
 
-    private val URL_REF_REGEX = Regex("""\burl\((['"])?(\#.+?)\1\)""", RegexOption.IGNORE_CASE)
+    private val URL_REF_REGEX = Regex("""url\(['"]?(#[^)'"]+)['"]?\)""", RegexOption.IGNORE_CASE)
 
     override val name: String = "prefixIds"
     override val description: String = "prefix IDs"
@@ -90,10 +90,9 @@ object PrefixIds : Plugin<PrefixIds.Params> {
                         val value = node.attributes[refProp]
                         if (value != null && value.contains("url(")) {
                             node.attributes[refProp] = URL_REF_REGEX.replace(value) { match ->
-                                val url = match.groupValues[2]
+                                val url = match.groupValues[1]
                                 if (url.startsWith("#")) {
-                                    "url(${generator("#" + url.substring(startIndex = 1)).removePrefix("#")})"
-                                        .let { "url(#${generator(url.substring(startIndex = 1))})" }
+                                    "url(#${generator(url.substring(startIndex = 1))})"
                                 } else {
                                     match.value
                                 }
@@ -127,15 +126,14 @@ object PrefixIds : Plugin<PrefixIds.Params> {
 
     private fun computePrefix(params: Params, info: PluginInfo): String {
         val raw = params.prefix
-        if (raw != null) {
-            return raw + params.delim
-        }
+        if (raw != null) return raw + params.delim
         val path = info.path
-        if (path != null && path.isNotEmpty()) {
-            val basename = path.substringAfterLast('/').substringAfterLast('\\')
-            return escapeIdentifierName(basename) + params.delim
+        val basename = if (path != null && path.isNotEmpty()) {
+            escapeIdentifierName(path.substringAfterLast('/').substringAfterLast('\\'))
+        } else {
+            FALLBACK_PREFIX
         }
-        return FALLBACK_PREFIX + params.delim
+        return basename + params.delim
     }
 
     private fun escapeIdentifierName(str: String): String =
@@ -143,4 +141,14 @@ object PrefixIds : Plugin<PrefixIds.Params> {
 
     private fun prefixId(prefix: String, body: String): String =
         if (body.startsWith(prefix)) body else prefix + body
+
+    private fun resolveParams(pluginParams: PluginParams): Params {
+        if (pluginParams is Params) return pluginParams
+        return Params(
+            prefix = pluginParams["prefix"] as? String,
+            delim = (pluginParams["delim"] as? String) ?: DEFAULT_DELIM,
+            prefixIds = (pluginParams["prefixIds"] as? Boolean) ?: true,
+            prefixClassNames = (pluginParams["prefixClassNames"] as? Boolean) ?: true,
+        )
+    }
 }
