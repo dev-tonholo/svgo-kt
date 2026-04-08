@@ -21,6 +21,9 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.kss.core)
+            implementation(libs.kss.lexer)
+            implementation(libs.kss.parser)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
