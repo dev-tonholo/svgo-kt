@@ -38,6 +38,7 @@ detekt {
     allRules = false // activate all available (even unstable) rules.
     // point to your custom config defining rules to run, overwriting default behavior
     config.setFrom("${rootProject.rootDir}/config/detekt.yml")
+    baseline = file("detekt-baseline.xml")
 }
 
 tasks.withType<Detekt>().configureEach {
