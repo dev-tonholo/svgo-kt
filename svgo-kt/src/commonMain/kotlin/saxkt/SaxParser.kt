@@ -1004,7 +1004,7 @@ private suspend fun openTag(parser: SaxParser, selfClosing: Boolean = false) {
         //   http://www.w3.org/TR/REC-xml-names/#defaulting
         for ((name, value) in parser.attribList) {
             val (prefix, local) = qname(name, isAttribute = true)
-            val uri = if (prefix.isEmpty()) "" else (tag.ns?.get(prefix) ?: "")
+            val uri = if (prefix.isEmpty()) "" else (tag.ns?.get(prefix) ?: parser.parentNs?.get(prefix) ?: "")
             var attribute = SaxAttribute(
                 name = name,
                 value = value,
@@ -1015,7 +1015,7 @@ private suspend fun openTag(parser: SaxParser, selfClosing: Boolean = false) {
 
             // if there's any attributes with an undefined namespace,
             // then fail on them now.
-            if (prefix != "xmlns" && uri.isNotEmpty()) {
+            if (prefix != "xmlns" && prefix.isNotEmpty() && uri.isEmpty()) {
                 strictFail(parser, "Unbound namespace prefix: $prefix")
                 attribute = attribute.copy(uri = prefix)
             }
@@ -1093,6 +1093,9 @@ private suspend fun attrib(parser: SaxParser) {
 
                     val ns = SaxNamespace(
                         buildMap {
+                            // Always include parent bindings as base so inherited prefixes
+                            // (e.g. xml, xmlns from rootNs) are available in this tag scope.
+                            parentNs?.let { putAll(it) }
                             tag.ns?.let { putAll(it) }
                             put(local, parser.buffer.attribValue)
                         }
