@@ -10,18 +10,11 @@ import svgokt.plugins.Collections
 import svgokt.plugins.xast.collectStylesheet
 import svgokt.style.computeStyle
 
-data class ApplyTransformsPrams(
-    val transformPrecision: Int,
-    val applyTransformsStroked: Boolean,
-) : PluginParams, Map<String, Any> by mapOf(
-    "transformPrecision" to transformPrecision,
-    "applyTransformsStroked" to applyTransformsStroked,
-)
-
 /**
  * Apply transformation(s) to the Path data.
  */
-fun applyTransforms(root: XastRoot, params: ApplyTransformsPrams): Visitor? {
+@Suppress("UnusedParameter")
+fun applyTransforms(root: XastRoot, params: ApplyTransformsParams): Visitor? {
     val stylesheet = collectStylesheet(root)
     return Visitor(
         element = VisitorNode(
@@ -51,7 +44,7 @@ fun applyTransforms(root: XastRoot, params: ApplyTransformsPrams): Visitor? {
                     return@VisitorNode VisitState.Continue
                 }
 
-                val computedStyles = computeStyle(stylesheet, node)
+                computeStyle(stylesheet, node)
 
                 VisitState.Continue
             }
@@ -59,9 +52,11 @@ fun applyTransforms(root: XastRoot, params: ApplyTransformsPrams): Visitor? {
     )
 }
 
-/*class ApplyTransforms(
-    override val params: ApplyTransformsPrams,
-    override val name: String?,
-    override val description: String?,
-    override val fn: PluginFn?,
-) : Plugin<ApplyTransformsPrams>*/
+data class ApplyTransformsParams(
+    val transformPrecision: Int,
+    val applyTransformsStroked: Boolean,
+) : PluginParams,
+    Map<String, Any> by mapOf(
+        "transformPrecision" to transformPrecision,
+        "applyTransformsStroked" to applyTransformsStroked,
+    )

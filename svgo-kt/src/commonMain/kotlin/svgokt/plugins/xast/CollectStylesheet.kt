@@ -12,6 +12,8 @@ import svgokt.domain.plugins.VisitState
 import svgokt.domain.plugins.Visitor
 import svgokt.domain.plugins.VisitorNode
 
+private const val SPECIFICITY_COMPONENTS = 4
+
 fun collectStylesheet(root: XastRoot): Stylesheet {
     val rules = mutableListOf<StylesheetRule>()
     val parents = mutableMapOf<XastElement, XastParent>()
@@ -56,20 +58,21 @@ fun collectStylesheet(root: XastRoot): Stylesheet {
  * Compares selector specificities.
  * Derived from https://github.com/keeganstreet/specificity/blob/8757133ddd2ed0163f120900047ff0f92760b536/specificity.js#L207
  */
+@Suppress("ReturnCount")
 private fun compareSpecificity(a: Specificity, b: Specificity): Int {
-    for (i in 0 until 4) {
+    for (i in 0 until SPECIFICITY_COMPONENTS) {
         if (a[i] < b[i]) {
-            return -1;
+            return -1
         } else if (a[i] > b[i]) {
-            return 1;
+            return 1
         }
     }
 
-    return 0;
+    return 0
 }
 
+@Suppress("UnusedParameter")
 private fun parseStylesheet(css: String, dynamic: Boolean): List<StylesheetRule> {
-    val rules = mutableListOf<StylesheetRule>()
-    // TODO: Find a way to parse CSS code to a AST and walk onto it...
+    // Stub: CSS-to-AST parsing not yet implemented.
     return listOf()
 }

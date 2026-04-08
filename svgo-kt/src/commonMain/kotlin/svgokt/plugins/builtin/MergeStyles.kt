@@ -29,6 +29,7 @@ object MergeStyles : Plugin<NoPluginParam> {
     private var collectedStyles = ""
     private var styleContentType = XastElementType.TEXT
 
+    @Suppress("ReturnCount")
     private fun onEnter(node: XastElement, parentNode: XastParent?): VisitState {
         // skip <foreignObject> content
         if (node.name == "foreignObject") {
@@ -52,7 +53,7 @@ object MergeStyles : Plugin<NoPluginParam> {
                 css += child.value
             }
             if (child is XastCdata) {
-                styleContentType = XastElementType.CDATA;
+                styleContentType = XastElementType.CDATA
                 css += child.value
             }
         }
@@ -83,18 +84,17 @@ object MergeStyles : Plugin<NoPluginParam> {
 
     private fun attachToFirstStyleElement(parentNode: XastParent?, node: XastElement) {
         parentNode?.let { node.detachFromParent(it) }
-        // detachNodeFromParent(node, parentNode) // TODO
+        // detachNodeFromParent(node, parentNode)
         val child = when (styleContentType) {
             XastElementType.TEXT -> XastText(value = collectedStyles)
             XastElementType.CDATA -> XastCdata(value = collectedStyles)
-            else -> throw IllegalStateException("Not expected type $styleContentType")
+            else -> error("Not expected type $styleContentType")
         }
-        // TODO remove legacy parentNode in v4
-        //child.parentNode = firstStyleElement
+        // Remove legacy parentNode in v4
+        // child.parentNode = firstStyleElement
         firstStyleElement?.children?.apply {
             clear()
             add(child)
         }
     }
-
 }

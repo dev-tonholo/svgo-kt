@@ -14,6 +14,9 @@ private const val SVG_DATA_URI_BASE64_PREFIX = "data:image/svg+xml;base64,"
  */
 private val URI_COMPONENT_SAFE = Regex("[A-Za-z0-9\\-_.!~*'()]")
 
+/** Bitmask to convert a signed byte to an unsigned int value. */
+private const val BYTE_MASK = 0xFF
+
 /**
  * Encodes an SVG string as a Data URI, matching svgo's `encodeSVGDatauri` behavior.
  *
@@ -49,7 +52,10 @@ private fun encodeUriComponent(input: String): String = buildString {
             val bytes = char.toString().encodeToByteArray()
             for (byte in bytes) {
                 append('%')
-                append(byte.toInt().and(0xFF).toString(radix = 16).uppercase().padStart(length = 2, padChar = '0'))
+                val hex = byte.toInt().and(BYTE_MASK)
+                    .toString(radix = 16).uppercase()
+                    .padStart(length = 2, padChar = '0')
+                append(hex)
             }
         }
     }

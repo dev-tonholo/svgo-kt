@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package svgokt.stringfier
 
 import svgokt.domain.EndOfLine
@@ -13,6 +15,8 @@ import svgokt.domain.XastRoot
 import svgokt.domain.XastText
 import svgokt.domain.builder.stringifyOptions
 import svgokt.plugins.Collections
+
+private const val DEFAULT_INDENT_SPACES = 4
 
 private val entities = mapOf(
     '&' to "&amp;",
@@ -41,7 +45,7 @@ private val defaults = stringifyOptions {
     cdataEnd = "]]>"
     textStart = ""
     textEnd = ""
-    indent = 4
+    indent = DEFAULT_INDENT_SPACES
     regEntities = "[&'\"<>]".toRegex()
     regValEntities = "[&\"<>]".toRegex()
     encodeEntity { char: Char ->
@@ -164,7 +168,6 @@ private fun stringifyElement(
     createNotEmptyElement(node, config, state)
 }
 
-
 private fun createEmptyOrShortTagElement(
     node: XastElement,
     config: StringifyOptions,
@@ -199,21 +202,21 @@ private fun createNotEmptyElement(
     var elementState = state
 
     if (state.textContext != null) {
-        tagOpenStart = defaults.tagOpenStart;
-        tagOpenEnd = defaults.tagOpenEnd;
-        tagCloseStart = defaults.tagCloseStart;
-        tagCloseEnd = defaults.tagCloseEnd;
+        tagOpenStart = defaults.tagOpenStart
+        tagOpenEnd = defaults.tagOpenEnd
+        tagCloseStart = defaults.tagCloseStart
+        tagCloseEnd = defaults.tagCloseEnd
         openIndent = ""
     } else if (Collections.textElements.contains(node.name)) {
-        tagOpenEnd = defaults.tagOpenEnd;
-        tagCloseStart = defaults.tagCloseStart;
+        tagOpenEnd = defaults.tagOpenEnd
+        tagCloseStart = defaults.tagCloseStart
         closeIndent = ""
         elementState = elementState.copy(textContext = node)
     }
 
     val children = stringifyNode(node, config, elementState)
 
-    // TODO: Would it work without the following commented logic?
+    // Would it work without the following commented logic?
 //    if (state.textContext === node) {
 //        state.textContext = null;
 //    }
@@ -251,7 +254,7 @@ private fun stringifyAttributes(
     config: StringifyOptions,
 ): String = buildString {
     for ((name, value) in node.attributes) {
-        // TODO remove attributes without values support in v3
+        // Remove attributes without values support in v3
         if (value.isNotEmpty()) {
             val encodedValue = value.replace(requireNotNull(config.regValEntities)) {
                 requireNotNull(config.encodeEntity)(it.value.single())

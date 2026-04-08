@@ -27,6 +27,11 @@ import svgokt.plugins.Collections
 
 private val entityDeclaration = """<!ENTITY\s+(\S+)\s+(?:'([^']+)'|"([^"]+)")\s*>""".toRegex()
 
+/** Regex capture group indices for [entityDeclaration]. */
+private const val ENTITY_NAME_GROUP = 1
+private const val ENTITY_SINGLE_QUOTE_VALUE_GROUP = 2
+private const val ENTITY_DOUBLE_QUOTE_VALUE_GROUP = 3
+
 sealed interface ParsingState {
     data object Parsing : ParsingState
     data object Parsed : ParsingState
@@ -35,8 +40,10 @@ sealed interface ParsingState {
 private object EndParseStateCollectionException :
     CancellationException("Parser has finished. Cancelling flow collection")
 
+@Suppress("TooManyFunctions")
 class SvgoParser(
-    private val coroutineContext: CoroutineDispatcher = Dispatchers.Default, // TODO: Create a platform expect dispatcher implementation
+    // Create a platform expect dispatcher implementation in the future.
+    private val coroutineContext: CoroutineDispatcher = Dispatchers.Default,
 ) {
     private val options = options {
         strict = true
@@ -75,9 +82,6 @@ class SvgoParser(
         val stateCollector = parserScope.async {
             sax.events
                 .collect { event ->
-                    // TODO remove legacy parentNode in v4
-                    val parentNode = current
-
                     when (event) {
                         is SaxEvent.Doctype -> handleDoctype(event, data)
 
@@ -111,8 +115,8 @@ class SvgoParser(
 
         try {
             awaitAll(writer, stateCollector)
-        } catch (e: EndParseStateCollectionException) {
-            // ignore the exception since it is intended.
+        } catch (expected: EndParseStateCollectionException) {
+            // Expected: parsing completed successfully.
         }
 
         return root
@@ -208,8 +212,12 @@ class SvgoParser(
         if (subsetStart >= 0) {
             var entityMatch = entityDeclaration.find(input = data, startIndex = subsetStart)
             while (entityMatch != null) {
-                val matches = entityMatch.groupValues
-                sax.addToEntity(key = matches[1], value = matches[2].ifEmpty { matches[3] })
+                val groups = entityMatch.groupValues
+                sax.addToEntity(
+                    key = groups[ENTITY_NAME_GROUP],
+                    value = groups[ENTITY_SINGLE_QUOTE_VALUE_GROUP]
+                        .ifEmpty { groups[ENTITY_DOUBLE_QUOTE_VALUE_GROUP] },
+                )
                 entityMatch = entityMatch.next()
             }
         }

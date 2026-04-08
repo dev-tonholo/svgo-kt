@@ -35,35 +35,36 @@ data class StringifyOptions(
     val eol: EndOfLine?,
     val finalNewline: Boolean?,
 ) {
+    @Suppress("CyclomaticComplexMethod")
     fun merge(other: StringifyOptions?): StringifyOptions {
         other ?: return this
-        var merged = this
-        if (other.doctypeStart != null) merged = merged.copy(doctypeStart = other.doctypeStart)
-        if (other.doctypeEnd != null) merged = merged.copy(doctypeEnd = other.doctypeEnd)
-        if (other.procInstStart != null) merged = merged.copy(procInstStart = other.procInstStart)
-        if (other.procInstEnd != null) merged = merged.copy(procInstEnd = other.procInstEnd)
-        if (other.tagOpenStart != null) merged = merged.copy(tagOpenStart = other.tagOpenStart)
-        if (other.tagOpenEnd != null) merged = merged.copy(tagOpenEnd = other.tagOpenEnd)
-        if (other.tagCloseStart != null) merged = merged.copy(tagCloseStart = other.tagCloseStart)
-        if (other.tagCloseEnd != null) merged = merged.copy(tagCloseEnd = other.tagCloseEnd)
-        if (other.tagShortStart != null) merged = merged.copy(tagShortStart = other.tagShortStart)
-        if (other.tagShortEnd != null) merged = merged.copy(tagShortEnd = other.tagShortEnd)
-        if (other.attrStart != null) merged = merged.copy(attrStart = other.attrStart)
-        if (other.attrEnd != null) merged = merged.copy(attrEnd = other.attrEnd)
-        if (other.commentStart != null) merged = merged.copy(commentStart = other.commentStart)
-        if (other.commentEnd != null) merged = merged.copy(commentEnd = other.commentEnd)
-        if (other.cdataStart != null) merged = merged.copy(cdataStart = other.cdataStart)
-        if (other.cdataEnd != null) merged = merged.copy(cdataEnd = other.cdataEnd)
-        if (other.textStart != null) merged = merged.copy(textStart = other.textStart)
-        if (other.textEnd != null) merged = merged.copy(textEnd = other.textEnd)
-        if (other.indent != null) merged = merged.copy(indent = other.indent)
-        if (other.regEntities != null) merged = merged.copy(regEntities = other.regEntities)
-        if (other.regValEntities != null) merged = merged.copy(regValEntities = other.regValEntities)
-        if (other.encodeEntity != null) merged = merged.copy(encodeEntity = other.encodeEntity)
-        if (other.pretty != null) merged = merged.copy(pretty = other.pretty)
-        if (other.useShortTags != null) merged = merged.copy(useShortTags = other.useShortTags)
-        if (other.eol != null) merged = merged.copy(eol = other.eol)
-        if (other.finalNewline != null) merged = merged.copy(finalNewline = other.finalNewline)
-        return merged
+        return copy(
+            doctypeStart = other.doctypeStart ?: doctypeStart,
+            doctypeEnd = other.doctypeEnd ?: doctypeEnd,
+            procInstStart = other.procInstStart ?: procInstStart,
+            procInstEnd = other.procInstEnd ?: procInstEnd,
+            tagOpenStart = other.tagOpenStart ?: tagOpenStart,
+            tagOpenEnd = other.tagOpenEnd ?: tagOpenEnd,
+            tagCloseStart = other.tagCloseStart ?: tagCloseStart,
+            tagCloseEnd = other.tagCloseEnd ?: tagCloseEnd,
+            tagShortStart = other.tagShortStart ?: tagShortStart,
+            tagShortEnd = other.tagShortEnd ?: tagShortEnd,
+            attrStart = other.attrStart ?: attrStart,
+            attrEnd = other.attrEnd ?: attrEnd,
+            commentStart = other.commentStart ?: commentStart,
+            commentEnd = other.commentEnd ?: commentEnd,
+            cdataStart = other.cdataStart ?: cdataStart,
+            cdataEnd = other.cdataEnd ?: cdataEnd,
+            textStart = other.textStart ?: textStart,
+            textEnd = other.textEnd ?: textEnd,
+            indent = other.indent ?: indent,
+            regEntities = other.regEntities ?: regEntities,
+            regValEntities = other.regValEntities ?: regValEntities,
+            encodeEntity = other.encodeEntity ?: encodeEntity,
+            pretty = other.pretty ?: pretty,
+            useShortTags = other.useShortTags ?: useShortTags,
+            eol = other.eol ?: eol,
+            finalNewline = other.finalNewline ?: finalNewline,
+        )
     }
 }

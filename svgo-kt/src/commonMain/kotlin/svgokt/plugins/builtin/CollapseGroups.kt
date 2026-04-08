@@ -39,6 +39,7 @@ object CollapseGroups : Plugin<NoPluginParam> {
         )
     }
 
+    @Suppress("ReturnCount")
     private fun onExit(node: XastElement, parentNode: XastParent?) {
         if (node.name != "g") return
         if (parentNode == null || parentNode is XastRoot) return

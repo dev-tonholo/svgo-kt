@@ -35,7 +35,11 @@ object MoveGroupAttrsToElems : Plugin<NoPluginParam> {
         )
     }
 
-    private fun onEnter(node: XastElement, @Suppress("UNUSED_PARAMETER") parentNode: XastParent?): VisitState {
+    @Suppress("ReturnCount")
+    private fun onEnter(
+        node: XastElement,
+        @Suppress("UNUSED_PARAMETER") parentNode: XastParent?,
+    ): VisitState {
         if (node.name != "g") return VisitState.Continue
 
         val children = node.children.filterIsInstance<XastElement>()

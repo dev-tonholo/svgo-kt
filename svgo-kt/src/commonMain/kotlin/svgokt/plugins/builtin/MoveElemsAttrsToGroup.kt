@@ -5,7 +5,6 @@ import svgokt.domain.XastParent
 import svgokt.domain.plugins.NoPluginParam
 import svgokt.domain.plugins.Plugin
 import svgokt.domain.plugins.PluginFn
-import svgokt.domain.plugins.VisitState
 import svgokt.domain.plugins.Visitor
 import svgokt.domain.plugins.VisitorNode
 import svgokt.plugins.Collections
@@ -29,7 +28,7 @@ import svgokt.plugins.Collections
  *
  * Note: stylesheet detection is not yet implemented (requires kss). SVGs with `<style>`
  * elements may receive incorrect optimisations.
- * TODO: skip when stylesheets exist once kss is available.
+ * Skip when stylesheets exist once kss is available.
  */
 object MoveElemsAttrsToGroup : Plugin<NoPluginParam> {
     override val name: String = "moveElemsAttrsToGroup"
