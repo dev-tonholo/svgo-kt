@@ -111,7 +111,13 @@ class InlineStyles(
         return VisitState.Continue
     }
 
-    @Suppress("ReturnCount", "NestedBlockDepth")
+    @Suppress(
+        "ReturnCount",
+        "NestedBlockDepth",
+        "CyclomaticComplexMethod",
+        "LoopWithTooManyJumpStatements",
+        "SwallowedException",
+    )
     private fun processStyles(
         root: svgokt.domain.XastRoot,
         styleEntries: MutableList<StyleEntry>,
@@ -243,6 +249,7 @@ class InlineStyles(
          * Simple CSS rule parser that extracts selector + declarations blocks.
          * Handles basic rules but not nested @ rules or complex selectors with braces.
          */
+        @Suppress("CyclomaticComplexMethod", "NestedBlockDepth", "LoopWithTooManyJumpStatements")
         private fun parseSimpleCssRules(css: String): MutableList<CssRule> {
             val rules = mutableListOf<CssRule>()
 

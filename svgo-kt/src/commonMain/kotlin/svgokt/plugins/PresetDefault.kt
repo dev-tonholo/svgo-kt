@@ -6,13 +6,17 @@ import svgokt.domain.plugins.NoPluginParam
 import svgokt.domain.plugins.Plugin
 import svgokt.plugins.builtin.CleanupAttrs
 import svgokt.plugins.builtin.CleanupEnableBackground
+import svgokt.plugins.builtin.CleanupIds
 import svgokt.plugins.builtin.CleanupNumericValues
 import svgokt.plugins.builtin.CollapseGroups
 import svgokt.plugins.builtin.ConvertEllipseToCircle
+import svgokt.plugins.builtin.ConvertPathData
 import svgokt.plugins.builtin.ConvertShapeToPath
 import svgokt.plugins.builtin.ConvertTransform
+import svgokt.plugins.builtin.InlineStyles
 import svgokt.plugins.builtin.MergePaths
 import svgokt.plugins.builtin.MergeStyles
+import svgokt.plugins.builtin.MinifyStyles
 import svgokt.plugins.builtin.MoveElemsAttrsToGroup
 import svgokt.plugins.builtin.MoveGroupAttrsToElems
 import svgokt.plugins.builtin.RemoveComments
@@ -36,13 +40,9 @@ import svgokt.plugins.builtin.SortDefsChildren
  * Preset-default plugin list, matching svgo 4.0.1 order.
  *
  * Not yet implemented (CSS-dependent):
- * - inlineStyles (position 9)
- * - minifyStyles (position 10)
- * - cleanupIds (position 11)
  * - removeUselessDefs (position 12)
  * - convertColors (position 14)
  * - removeUnknownsAndDefaults (position 15)
- * - convertPathData (position 26) - stub exists but returns null
  */
 private val plugins: List<Plugin<*>> = listOf(
     RemoveDoctype, // 1
@@ -53,9 +53,9 @@ private val plugins: List<Plugin<*>> = listOf(
     RemoveEditorsNSData, // 6
     CleanupAttrs, // 7
     MergeStyles, // 8
-    // inlineStyles,                 // 9 - not yet implemented
-    // minifyStyles,                 // 10 - not yet implemented
-    // cleanupIds,                   // 11 - not yet implemented
+    InlineStyles(), // 9
+    MinifyStyles, // 10
+    CleanupIds(), // 11
     // removeUselessDefs,            // 12 - not yet implemented
     CleanupNumericValues, // 13
     // convertColors,                // 14 - not yet implemented
@@ -70,7 +70,7 @@ private val plugins: List<Plugin<*>> = listOf(
     MoveElemsAttrsToGroup, // 23
     MoveGroupAttrsToElems, // 24
     CollapseGroups, // 25
-    // convertPathData,              // 26 - stub, returns null
+    ConvertPathData(), // 26
     ConvertTransform, // 27
     RemoveEmptyAttrs, // 28
     RemoveEmptyContainers, // 29
