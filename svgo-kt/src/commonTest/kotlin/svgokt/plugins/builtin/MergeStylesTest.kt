@@ -41,8 +41,8 @@ class MergeStylesTest {
         val result = optimizer.optimize(input = TestFixtures.MERGE_STYLES_NO_STYLES)
 
         assertTrue(
-            actual = result.data.contains("rect"),
-            message = "Expected <rect> to still be present in: ${result.data}",
+            actual = result.data.contains("class=\"st0\""),
+            message = "Expected element with class st0 to still be present in: ${result.data}",
         )
         assertFalse(
             actual = result.data.contains("<style"),
