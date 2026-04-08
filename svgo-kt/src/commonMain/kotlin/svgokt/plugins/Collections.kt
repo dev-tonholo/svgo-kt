@@ -98,6 +98,16 @@ private object ElementGroups {
 
 object Collections {
     /**
+     * SVG shape elements that can have stroke and fill attributes.
+     */
+    val shapeElements: Set<String> = ElementGroups.shape
+
+    /**
+     * SVG non-rendering elements that are only used by reference.
+     */
+    val nonRenderingElements: Set<String> = ElementGroups.nonRendering
+
+    /**
      * SVG container elements - elements that can contain child elements.
      * Empty container elements (with no children) are generally safe to remove.
      */
