@@ -49,7 +49,12 @@ object CleanupEnableBackground : Plugin<NoPluginParam> {
         )
     }
 
-    private fun removeEnableBackground(node: XastElement, @Suppress("UNUSED_PARAMETER") parentNode: XastParent?): VisitState {
+    private fun removeEnableBackground(
+        node: XastElement,
+        @Suppress(
+            "UNUSED_PARAMETER"
+        ) parentNode: XastParent?
+    ): VisitState {
         node.attributes.remove(ATTR_ENABLE_BACKGROUND)
         return VisitState.Continue
     }

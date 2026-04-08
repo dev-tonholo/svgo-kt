@@ -2,11 +2,11 @@ package svgokt.plugins.builtin
 
 import svgokt.domain.XastChild
 import svgokt.domain.XastElement
+import svgokt.domain.builder.plugins.plugin
 import svgokt.domain.plugins.NoPluginParam
 import svgokt.domain.plugins.VisitState
 import svgokt.domain.plugins.Visitor
 import svgokt.domain.plugins.VisitorNode
-import svgokt.domain.builder.plugins.plugin
 
 /**
  * Sort children of <defs> elements by:

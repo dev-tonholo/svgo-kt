@@ -31,15 +31,16 @@ val PresetDefault = plugin<NoPluginParam> {
                 if (pluginNames.contains(pluginName).not()) {
                     println(
                         """
-                        |You are trying to configure $pluginName which is not part of ${name}.
+                        |You are trying to configure $pluginName which is not part of $name.
                         |Try to put it before or after, for example
                         |
                         |plugins: [
                         |  {
-                        |    name: '${name}',
+                        |    name: '$name',
                         |  },
-                        |  '${pluginName}'
-                        |]""".trimMargin()
+                        |  '$pluginName'
+                        |]
+                        """.trimMargin()
                     )
                 }
             }

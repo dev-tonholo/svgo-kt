@@ -16,6 +16,7 @@ class SvgoParserException(
             |   source='$source',
             |   file='$file',
             |)
-            |""".trimMargin()
+            |
+        """.trimMargin()
     }
 }

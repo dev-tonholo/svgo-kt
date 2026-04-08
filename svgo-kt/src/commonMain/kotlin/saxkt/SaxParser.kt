@@ -253,7 +253,9 @@ internal class SaxParser(
                             val paddedString = if (startTagPosition + 1 < positionTracker?.position.orZero()) {
                                 val pad = positionTracker?.position.orZero() - startTagPosition
                                 " ".repeat(pad) + currentChar
-                            } else currentChar.toString()
+                            } else {
+                                currentChar.toString()
+                            }
                             updateBuffer { copy(textNode = "$textNode<$paddedString") }
                         }
                     }
@@ -542,10 +544,12 @@ internal class SaxParser(
                     } else {
                         strictFail(parser = this, "Attribute without value")
                         val attribute = SaxAttribute(name = buffer.attribName, value = buffer.attribValue)
-                        tag = tag?.copy(attributes = buildMap {
-                            tag?.attributes?.let { putAll(it) }
-                            put(buffer.attribName, attribute)
-                        })
+                        tag = tag?.copy(
+                            attributes = buildMap {
+                                tag?.attributes?.let { putAll(it) }
+                                put(buffer.attribName, attribute)
+                            }
+                        )
                         emitNode(SaxEvent.Attribute(attribute))
                         updateBuffer { copy(attribValue = "", attribName = "") }
                         when {
@@ -638,7 +642,7 @@ internal class SaxParser(
                             currentChar.isSaxWhitespace() -> continue
                             currentChar.isNotMatch(nameStart) -> {
                                 if (buffer.script.isNotEmpty()) {
-                                    updateBuffer { copy(script = "${script}</$currentChar") }
+                                    updateBuffer { copy(script = "$script</$currentChar") }
                                     state = Sax.State.SCRIPT
                                 } else {
                                     strictFail(parser = this, "Invalid tagname in closing tag.")
@@ -894,7 +898,9 @@ internal class SaxParser(
             // will be overridden if tag contains an xmlns="foo" or xmlns:foo="bar"
             ns = if (options.xmlns) {
                 tags.getOrNull(index = tags.size - 1)?.ns
-            } else null,
+            } else {
+                null
+            },
         )
         this.tag = tag
         attribList.clear()
@@ -1154,7 +1160,6 @@ private suspend fun strictFail(parser: SaxParser, message: String) {
     }
 }
 
-
 private suspend fun error(parser: SaxParser, reason: String): SaxParser {
     parser.closeText()
 
@@ -1162,7 +1167,7 @@ private suspend fun error(parser: SaxParser, reason: String): SaxParser {
             |Line: ${parser.positionTracker?.line}
             |Column: ${parser.positionTracker?.column}
             |Char: ${parser.currentChar}
-            """.trimMargin()
+    """.trimMargin()
 
     val error = SaxError(
         reason = reason,

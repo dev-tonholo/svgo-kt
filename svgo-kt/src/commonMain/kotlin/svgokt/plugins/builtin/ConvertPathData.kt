@@ -3,7 +3,6 @@ package svgokt.plugins.builtin
 import svgokt.domain.plugins.Plugin
 import svgokt.domain.plugins.PluginFn
 import svgokt.domain.plugins.PluginParams
-import svgokt.domain.plugins.Visitor
 
 data class MakeArcs(
     val threshold: Float,
@@ -32,26 +31,27 @@ data class ConvertPathDataParams(
     val negativeExtraSpace: Boolean = true,
     val noSpaceAfterFlags: Boolean = false, // a20 60 45 0 1 30 20 → a20 60 45 0130 20
     val forceAbsolutePath: Boolean = false,
-) : PluginParams, Map<String, Any> by mapOf(
-    "applyTransforms" to applyTransforms,
-    "applyTransformsStroked" to applyTransformsStroked,
-    "makeArcs" to makeArcs,
-    "straightCurves" to straightCurves,
-    "convertToQ" to convertToQ,
-    "lineShorthands" to lineShorthands,
-    "convertToZ" to convertToZ,
-    "curveSmoothShorthands" to curveSmoothShorthands,
-    "floatPrecision" to floatPrecision,
-    "transformPrecision" to transformPrecision,
-    "smartArcRounding" to smartArcRounding,
-    "removeUseless" to removeUseless,
-    "collapseRepeated" to collapseRepeated,
-    "utilizeAbsolute" to utilizeAbsolute,
-    "leadingZero" to leadingZero,
-    "negativeExtraSpace" to negativeExtraSpace,
-    "noSpaceAfterFlags" to noSpaceAfterFlags,
-    "forceAbsolutePath" to forceAbsolutePath,
-)
+) : PluginParams,
+    Map<String, Any> by mapOf(
+        "applyTransforms" to applyTransforms,
+        "applyTransformsStroked" to applyTransformsStroked,
+        "makeArcs" to makeArcs,
+        "straightCurves" to straightCurves,
+        "convertToQ" to convertToQ,
+        "lineShorthands" to lineShorthands,
+        "convertToZ" to convertToZ,
+        "curveSmoothShorthands" to curveSmoothShorthands,
+        "floatPrecision" to floatPrecision,
+        "transformPrecision" to transformPrecision,
+        "smartArcRounding" to smartArcRounding,
+        "removeUseless" to removeUseless,
+        "collapseRepeated" to collapseRepeated,
+        "utilizeAbsolute" to utilizeAbsolute,
+        "leadingZero" to leadingZero,
+        "negativeExtraSpace" to negativeExtraSpace,
+        "noSpaceAfterFlags" to noSpaceAfterFlags,
+        "forceAbsolutePath" to forceAbsolutePath,
+    )
 
 class ConvertPathData(
     override val params: ConvertPathDataParams = ConvertPathDataParams(),

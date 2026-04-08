@@ -1,10 +1,10 @@
 package svgokt.plugins.builtin
 
+import svgokt.domain.builder.plugins.plugin
 import svgokt.domain.plugins.NoPluginParam
 import svgokt.domain.plugins.VisitState
 import svgokt.domain.plugins.Visitor
 import svgokt.domain.plugins.VisitorNode
-import svgokt.domain.builder.plugins.plugin
 
 private val defaultOrder = listOf(
     "id", "width", "height", "x", "x1", "x2", "y", "y1", "y2",
