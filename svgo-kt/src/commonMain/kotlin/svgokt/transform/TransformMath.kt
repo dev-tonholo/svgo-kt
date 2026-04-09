@@ -2,30 +2,51 @@ package svgokt.transform
 
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.round
 import kotlin.math.sin
 import kotlin.math.tan
 
 private const val DEGREES_TO_RADIANS = PI / 180.0
+private const val RADIANS_TO_DEGREES = 180.0 / PI
 
 /**
  * Convert degrees to radians.
  */
-private fun degreesToRadians(degrees: Double): Double = degrees * DEGREES_TO_RADIANS
+internal fun degreesToRadians(degrees: Double): Double = degrees * DEGREES_TO_RADIANS
+
+/**
+ * Convert radians to degrees.
+ */
+internal fun radiansToDegrees(radians: Double): Double = radians * RADIANS_TO_DEGREES
 
 /**
  * Cosine of an angle given in degrees.
  */
-private fun cosDeg(degrees: Double): Double = cos(degreesToRadians(degrees))
+internal fun cosDeg(degrees: Double): Double = cos(degreesToRadians(degrees))
 
 /**
  * Sine of an angle given in degrees.
  */
-private fun sinDeg(degrees: Double): Double = sin(degreesToRadians(degrees))
+internal fun sinDeg(degrees: Double): Double = sin(degreesToRadians(degrees))
 
 /**
  * Tangent of an angle given in degrees.
  */
-private fun tanDeg(degrees: Double): Double = tan(degreesToRadians(degrees))
+internal fun tanDeg(degrees: Double): Double = tan(degreesToRadians(degrees))
+
+/**
+ * Equivalent to JS `Number.toFixed` - round to given decimal places and return as Double.
+ */
+internal fun toFixed(num: Double, precision: Int): Double {
+    val pow = pow10(precision)
+    return round(num * pow) / pow
+}
+
+private fun pow10(n: Int): Double {
+    var result = 1.0
+    repeat(n) { result *= 10.0 }
+    return result
+}
 
 /**
  * Convert a [TransformItem] to its 6-element affine matrix representation.
