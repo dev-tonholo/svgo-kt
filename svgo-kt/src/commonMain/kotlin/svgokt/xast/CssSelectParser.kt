@@ -14,20 +14,91 @@ import svgokt.domain.XastElement
 import svgokt.domain.XastParent
 
 /**
- * Parses a CSS selector string into a list of [SelectorListItem]s.
+ * CSS combinators that the selector engine does not support. Selectors
+ * containing any of these tokens are rejected early so that the kss
+ * tokenizer does not hang or loop on non-standard syntax.
+ */
+private val UNSUPPORTED_COMBINATOR_TOKENS = listOf("/deep/", ">>>", "::shadow")
+
+/**
+ * Regex that matches a single `:not(...)` functional pseudo-class.
+ * Captures the content inside the parentheses as group 1.
+ */
+private val NOT_PSEUDO_REGEX = Regex(":not\\(([^)]+)\\)")
+
+/**
+ * Wraps a parsed [SelectorListItem] together with optional negation selectors
+ * extracted from `:not()` pseudo-classes that appear in the original CSS text.
+ */
+internal data class ResolvedSelector(
+    val base: SelectorListItem,
+    val negations: List<SelectorListItem>,
+)
+
+/**
+ * Parses a CSS selector string into a list of [ResolvedSelector]s.
  *
  * Selectors that start with a type name or class/id/pseudo-class prefix are
  * delegated to the kss parser via a fake rule (`selector { }`). Selectors
  * starting with `*` or `[` are handled by a lightweight fallback parser
  * because the kss tokenizer does not recognise these characters at position 0.
  *
+ * `:not()` pseudo-classes are extracted and parsed separately so the negation
+ * logic can be applied during matching without relying on the kss parser's
+ * PseudoClass node.
+ *
  * Comma-separated groups are split before parsing so each group can be
  * handled independently.
+ */
+internal fun parseResolvedSelectors(selector: String): List<ResolvedSelector> =
+    selector.split(",").mapNotNull { part ->
+        val trimmed = part.trim()
+        if (trimmed.isEmpty()) return@mapNotNull null
+        if (UNSUPPORTED_COMBINATOR_TOKENS.any { token -> trimmed.contains(token) }) {
+            return@mapNotNull null
+        }
+        resolveSelector(trimmed)
+    }
+
+/**
+ * Parses a single (non-comma-separated) selector, extracting `:not()` into
+ * separate negation selectors for manual evaluation.
+ */
+@Suppress("ReturnCount")
+private fun resolveSelector(selector: String): ResolvedSelector? {
+    val notMatches = NOT_PSEUDO_REGEX.findAll(selector).toList()
+    if (notMatches.isEmpty()) {
+        val base = tryParseViaKss(selector) ?: parseFallback(selector) ?: return null
+        return ResolvedSelector(base = base, negations = emptyList())
+    }
+
+    // Strip all :not(...) occurrences to get the base selector.
+    val baseSelectorText = NOT_PSEUDO_REGEX.replace(selector, "").trim().ifEmpty { "*" }
+    val base = tryParseViaKss(baseSelectorText)
+        ?: parseFallback(baseSelectorText)
+        ?: return null
+
+    val negations = notMatches.mapNotNull { match ->
+        val inner = match.groupValues[1].trim()
+        tryParseViaKss(inner) ?: parseFallback(inner)
+    }
+
+    return ResolvedSelector(base = base, negations = negations)
+}
+
+/**
+ * Legacy entry point that returns plain [SelectorListItem]s.
+ * Kept for callers that do not need `:not()` support.
  */
 internal fun parseSelectorListItems(selector: String): List<SelectorListItem> =
     selector.split(",").mapNotNull { part ->
         val trimmed = part.trim()
         if (trimmed.isEmpty()) return@mapNotNull null
+        // Bail out early for unsupported combinators that can cause the
+        // parser to hang (e.g. /deep/, >>>, ::shadow).
+        if (UNSUPPORTED_COMBINATOR_TOKENS.any { token -> trimmed.contains(token) }) {
+            return@mapNotNull null
+        }
         tryParseViaKss(trimmed) ?: parseFallback(trimmed)
     }
 
@@ -222,6 +293,9 @@ internal fun matchesSimpleSelector(
             )
         }
     }
+    // Pseudo-classes like :not() are handled at the string level by
+    // parseResolvedSelectors before reaching this matching function.
+    // Any remaining pseudo-class selectors that reach here are unsupported.
     is Selector.PseudoClass -> false
     is Selector.PseudoElement -> false
 }

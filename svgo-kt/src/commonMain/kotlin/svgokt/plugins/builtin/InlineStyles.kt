@@ -628,6 +628,7 @@ class InlineStyles(
                     usePseudos = usePseudos,
                     selectors = selectors,
                     fullSelectorGroup = selectorText.trim(),
+                    mediaQuery = mediaQuery,
                 )
                 if (!wasProcessed) {
                     skippedParts.add(trimmedSel)
@@ -649,12 +650,14 @@ class InlineStyles(
          * Returns true if the selector was processed (added to selectors list),
          * false if it was skipped.
          */
+        @Suppress("LongParameterList")
         private fun processSingleSelector(
             selector: String,
             declarations: List<Declaration>,
             usePseudos: List<String>,
             selectors: MutableList<CssSelector>,
             fullSelectorGroup: String,
+            mediaQuery: String = "",
         ): Boolean {
             // Extract pseudo-classes/elements from selector
             val pseudoParts = extractPseudoParts(selector)
@@ -679,6 +682,7 @@ class InlineStyles(
                     classNames = classNames,
                     idName = idName,
                     fullSelectorGroup = fullSelectorGroup,
+                    mediaQuery = mediaQuery,
                 ),
             )
             return true
@@ -800,31 +804,24 @@ class InlineStyles(
         private fun rebuildStylesheet(entry: StyleEntry): String {
             val sb = StringBuilder()
 
+            val allSelectors = entry.selectors
+
             // Emit at-rules first
             for (atRule in entry.atRules) {
-                sb.append(minifyAtRule(atRule))
+                sb.append(
+                    minifyAtRule(
+                        atRule = atRule,
+                        remainingSelectors = allSelectors,
+                    ),
+                )
             }
 
-            // Emit remaining (non-removed) selectors grouped by declarations
-            val remainingSelectors = entry.selectors.filter { !it.removed }
-            val rulesByDecl = mutableMapOf<String, MutableList<CssSelector>>()
-            for (sel in remainingSelectors) {
-                val declKey = sel.declarations.joinToString(separator = ";") { decl ->
-                    val imp = if (decl.important) "!important" else ""
-                    "${decl.property}:${decl.value}$imp"
-                }
-                rulesByDecl.getOrPut(declKey) { mutableListOf() }.add(sel)
-            }
-
-            for ((declKey, sels) in rulesByDecl) {
-                val selectorText = sels.joinToString(separator = ",") {
-                    minifySelector(it.originalSelector)
-                }
-                sb.append(selectorText)
-                sb.append('{')
-                sb.append(declKey)
-                sb.append('}')
-            }
+            // Emit remaining (non-removed) non-media selectors.
+            // Group selectors that originally belonged to the same rule (same
+            // fullSelectorGroup + declarations) so comma-separated selectors
+            // are kept together when some of them are removed.
+            val remainingSelectors = entry.selectors.filter { !it.removed && it.mediaQuery.isEmpty() }
+            emitSelectorsAsRules(remainingSelectors, sb)
 
             // Emit skipped rules (selectors with pseudos not in usePseudos)
             for (skipped in entry.skippedRules) {
@@ -849,14 +846,213 @@ class InlineStyles(
                 .replace(Regex("\\s*>\\s*"), ">")
                 .replace(Regex("\\s*\\+\\s*"), "+")
                 .replace(Regex("\\s*~\\s*"), "~")
+                .replace(Regex("\\s*/deep/\\s*"), "/deep/")
 
-        private fun minifyAtRule(atRule: AtRule): String {
+        /**
+         * Renders an at-rule, optionally rebuilding its inner content from
+         * remaining selectors when it is a media query whose rules may have
+         * been inlined.
+         */
+        private fun minifyAtRule(
+            atRule: AtRule,
+            remainingSelectors: List<CssSelector> = emptyList(),
+        ): String {
             if (atRule.inner == null) {
-                return MinifyStyles.minifyCss(atRule.text)
+                return minifySimpleAtRule(atRule.text)
             }
-            val minifiedPrelude = MinifyStyles.minifyCss(atRule.text)
-            val minifiedInner = MinifyStyles.minifyCss(atRule.inner)
+            val minifiedPrelude = minifyAtRulePrelude(atRule.text)
+
+            if (atRule.isMedia) {
+                // Rebuild the inner content from selectors that were NOT inlined.
+                val mediaQuery = buildMediaQuery(atRule.text)
+                val mediaSelectors = remainingSelectors.filter { sel ->
+                    !sel.removed && sel.mediaQuery == mediaQuery
+                }
+                val innerContent = buildInnerCssFromSelectors(mediaSelectors)
+                return "$minifiedPrelude{$innerContent}"
+            }
+
+            val minifiedInner = minifyAtRuleInner(atRule.inner)
             return "$minifiedPrelude{$minifiedInner}"
+        }
+
+        /**
+         * Builds minified CSS rule text from a list of selectors.
+         */
+        private fun buildInnerCssFromSelectors(
+            selectors: List<CssSelector>,
+        ): String {
+            if (selectors.isEmpty()) return ""
+            val sb = StringBuilder()
+            emitSelectorsAsRules(selectors, sb)
+            return sb.toString()
+        }
+
+        /**
+         * Emits CSS rules from a list of selectors. Selectors that originally
+         * belonged to the same rule (identified by the same [CssSelector.fullSelectorGroup]
+         * and identical declaration body) are grouped into a single comma-separated
+         * rule. Selectors from different original rules remain separate, even if
+         * their declarations happen to be identical.
+         */
+        private fun emitSelectorsAsRules(
+            selectors: List<CssSelector>,
+            sb: StringBuilder,
+        ) {
+            // Group by original rule identity: (fullSelectorGroup, declarations text).
+            // Using a LinkedHashMap preserves insertion (document) order.
+            val ruleGroups = linkedMapOf<String, MutableList<CssSelector>>()
+            for (sel in selectors) {
+                val declKey = sel.declarations.joinToString(separator = ";") { decl ->
+                    val imp = if (decl.important) "!important" else ""
+                    "${decl.property}:${decl.value}$imp"
+                }
+                val groupKey = "${sel.fullSelectorGroup}\u0000$declKey"
+                ruleGroups.getOrPut(groupKey) { mutableListOf() }.add(sel)
+            }
+
+            for ((_, sels) in ruleGroups) {
+                val selectorText = sels.joinToString(separator = ",") {
+                    minifySelector(it.originalSelector)
+                }
+                val declKey = sels.first().declarations.joinToString(separator = ";") { decl ->
+                    val imp = if (decl.important) "!important" else ""
+                    "${decl.property}:${decl.value}$imp"
+                }
+                sb.append(selectorText)
+                sb.append('{')
+                sb.append(declKey)
+                sb.append('}')
+            }
+        }
+
+        /**
+         * Minifies a simple (non-block) at-rule such as `@charset`, `@namespace`,
+         * or `@import`. Normalizes quotes to match csstree.generate output:
+         * - @charset uses double quotes
+         * - url() drops unnecessary inner quotes
+         */
+        private fun minifySimpleAtRule(text: String): String {
+            var result = text.trim()
+            result = result.replace(Regex("\\s+"), " ")
+
+            // @charset: normalize single quotes to double quotes
+            result = result.replace(
+                Regex("@charset\\s+'([^']*)'"),
+                "@charset \"$1\"",
+            )
+
+            // url(): remove inner quotes when URL does not contain special chars
+            result = result.replace(Regex("url\\(['\"]([^'\"()\\s]*)['\"]\\)")) { match ->
+                "url(${match.groupValues[1]})"
+            }
+
+            return result
+        }
+
+        /**
+         * Minifies an at-rule prelude (e.g. `@font-face`, `@media ...`,
+         * `@supports ...`). Collapses whitespace and removes spaces around
+         * colons, but preserves the space before pseudo-selectors in @page.
+         */
+        private fun minifyAtRulePrelude(text: String): String {
+            var result = text.trim()
+            result = result.replace(Regex("\\s+"), " ")
+            // Collapse spaces around colons in media features
+            result = result.replace(Regex("\\s*:\\s*"), ":")
+
+            // url(): remove inner quotes
+            result = result.replace(Regex("url\\(['\"]([^'\"()\\s]*)['\"]\\)")) { match ->
+                "url(${match.groupValues[1]})"
+            }
+
+            // Restore space before pseudo-selectors in @page
+            result = result.replace(Regex("@page:(\\w)"), "@page :$1")
+
+            return result
+        }
+
+        /**
+         * Minifies the inner CSS of a block at-rule (e.g. the body of
+         * @font-face, @keyframes, @supports, @document).
+         * Matches csstree.generate behavior:
+         * - Removes trailing semicolons before }
+         * - Preserves spaces after commas in declaration values
+         * - Collapses whitespace
+         */
+        private fun minifyAtRuleInner(css: String): String {
+            var result = css.trim()
+            // Remove comments
+            result = result.replace(Regex("/\\*[\\s\\S]*?\\*/"), "")
+            // Collapse whitespace
+            result = result.replace(Regex("\\s+"), " ")
+            // Remove spaces around { }
+            result = result.replace(Regex("\\s*\\{\\s*"), "{")
+            result = result.replace(Regex("\\s*}\\s*"), "}")
+            // Remove spaces around semicolons
+            result = result.replace(Regex("\\s*;\\s*"), ";")
+            // Remove spaces around colons (property:value)
+            result = result.replace(Regex("\\s*:\\s*"), ":")
+            // Remove spaces around commas
+            result = result.replace(Regex("\\s*,\\s*"), ",")
+            // Remove trailing semicolons before }
+            result = result.replace(Regex(";+}"), "}")
+            // Remove trailing semicolons at the end of the inner block
+            // (this handles declaration-only blocks like @font-face, @viewport, @page)
+            result = result.trimEnd(';')
+            // Preserve space after commas in declaration values.
+            // csstree.generate preserves spaces after commas in values like
+            // src: local("A"), url("B"). If the inner block has no nested
+            // braces, it is a declaration-only block (e.g. @font-face) and
+            // all commas are in values. Otherwise, only commas between { and }
+            // are in values.
+            val hasNestedBlocks = result.contains('{')
+            result = restoreCommaSpacesInValues(
+                css = result,
+                treatAllAsValues = !hasNestedBlocks,
+            )
+            return result.trim()
+        }
+
+        /**
+         * In CSS declaration values, csstree.generate preserves a space after
+         * commas (e.g. `src:local("A"), local("B")`). After minification we
+         * lost those spaces, so we restore them for commas that appear inside
+         * declaration values. A comma is considered to be inside a value when
+         * it is NOT between `}` and `{` (i.e. not separating selectors).
+         *
+         * When [treatAllAsValues] is true, all commas get a trailing space.
+         * This is appropriate for declaration-only blocks (e.g. @font-face).
+         */
+        private fun restoreCommaSpacesInValues(
+            css: String,
+            treatAllAsValues: Boolean = false,
+        ): String {
+            if (treatAllAsValues) {
+                return css.replace(",", ", ")
+            }
+            val sb = StringBuilder()
+            var inDeclarations = false
+            var i = 0
+            while (i < css.length) {
+                val ch = css[i]
+                when {
+                    ch == '{' -> {
+                        inDeclarations = true
+                        sb.append(ch)
+                    }
+                    ch == '}' -> {
+                        inDeclarations = false
+                        sb.append(ch)
+                    }
+                    ch == ',' && inDeclarations -> {
+                        sb.append(", ")
+                    }
+                    else -> sb.append(ch)
+                }
+                i++
+            }
+            return sb.toString()
         }
     }
 
@@ -887,6 +1083,7 @@ class InlineStyles(
         val classNames: List<String>,
         val idName: String?,
         val fullSelectorGroup: String,
+        val mediaQuery: String = "",
         var removed: Boolean = false,
         var matchedElements: List<XastElement>? = null,
     )

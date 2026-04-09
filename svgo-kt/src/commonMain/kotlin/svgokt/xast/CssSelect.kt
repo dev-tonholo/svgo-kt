@@ -18,14 +18,20 @@ fun querySelectorAll(
     selector: String,
     parents: Map<XastChild, XastParent>? = null,
 ): List<XastElement> {
-    val selectorItems = parseSelectorListItems(selector)
+    val resolvedSelectors = parseResolvedSelectors(selector)
     return collectElements(node).filter { element ->
-        selectorItems.any { selectorItem ->
+        resolvedSelectors.any { resolved ->
             matchesSelectorListItem(
                 element = element,
-                selectorItem = selectorItem,
+                selectorItem = resolved.base,
                 parents = parents,
-            )
+            ) && resolved.negations.none { negation ->
+                matchesSelectorListItem(
+                    element = element,
+                    selectorItem = negation,
+                    parents = parents,
+                )
+            }
         }
     }
 }
@@ -44,14 +50,20 @@ fun querySelector(
     selector: String,
     parents: Map<XastChild, XastParent>? = null,
 ): XastElement? {
-    val selectorItems = parseSelectorListItems(selector)
+    val resolvedSelectors = parseResolvedSelectors(selector)
     return collectElements(node).firstOrNull { element ->
-        selectorItems.any { selectorItem ->
+        resolvedSelectors.any { resolved ->
             matchesSelectorListItem(
                 element = element,
-                selectorItem = selectorItem,
+                selectorItem = resolved.base,
                 parents = parents,
-            )
+            ) && resolved.negations.none { negation ->
+                matchesSelectorListItem(
+                    element = element,
+                    selectorItem = negation,
+                    parents = parents,
+                )
+            }
         }
     }
 }
@@ -70,13 +82,19 @@ fun matches(
     selector: String,
     parents: Map<XastChild, XastParent>? = null,
 ): Boolean {
-    val selectorItems = parseSelectorListItems(selector)
-    return selectorItems.any { selectorItem ->
+    val resolvedSelectors = parseResolvedSelectors(selector)
+    return resolvedSelectors.any { resolved ->
         matchesSelectorListItem(
             element = node,
-            selectorItem = selectorItem,
+            selectorItem = resolved.base,
             parents = parents,
-        )
+        ) && resolved.negations.none { negation ->
+            matchesSelectorListItem(
+                element = node,
+                selectorItem = negation,
+                parents = parents,
+            )
+        }
     }
 }
 
