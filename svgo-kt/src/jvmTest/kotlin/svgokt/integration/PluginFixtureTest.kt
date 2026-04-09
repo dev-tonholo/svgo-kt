@@ -3,14 +3,11 @@
 package svgokt.integration
 
 import kotlinx.coroutines.runBlocking
-import svgokt.domain.plugins.NoPluginParam
-import svgokt.domain.plugins.PluginFn
-import svgokt.domain.plugins.PluginInfo
-import svgokt.domain.plugins.PluginParams
+import svgokt.domain.Config
 import svgokt.domain.builder.stringifyOptions
-import svgokt.parser.SvgoParser
-import svgokt.plugins.xast.visit
-import svgokt.stringfier.stringifySvg
+import svgokt.domain.builder.svgo
+import svgokt.domain.plugins.PluginConfig
+import svgokt.domain.plugins.PluginParams
 import java.io.File
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
@@ -24,14 +21,15 @@ import kotlin.test.fail
  * svgo-kt Kotlin implementation.
  *
  * Each `.svg.txt` file in the svgo fixture directory tests a single plugin.
- * This test reads every fixture, runs the matching Kotlin plugin, and compares
- * the output against the expected result.
+ * This test reads every fixture, runs the matching Kotlin plugin through the
+ * full Svgo.optimize() pipeline, and compares the output against the expected
+ * result.
  *
  * Matches the JS test harness behavior:
- * - Each plugin runs individually (not preset-default).
- * - Uses `pretty: true` for stringification.
+ * - Each plugin runs individually via optimize() (not preset-default).
+ * - Uses `pretty: true` for stringification via js2svg config.
  * - Tests 2-pass idempotence (except addAttributesToSVGElement and convertTransform).
- * - Fixture params (JSON after second @@@) are merged into plugin params.
+ * - Fixture params (JSON after second @@@) are passed as BuiltinWithParams.
  */
 class PluginFixtureTest {
 
@@ -52,6 +50,12 @@ class PluginFixtureTest {
     private val prettyOptions = stringifyOptions {
         pretty = true
     }
+
+    /**
+     * Set of plugin names registered in [pluginRegistry].
+     * Used to determine whether a fixture should be skipped (plugin not implemented).
+     */
+    private val registeredPluginNames: Set<String> = pluginRegistry.keys
 
     /**
      * Plugins where the JS harness only does a single pass (no idempotence check).
@@ -79,8 +83,7 @@ class PluginFixtureTest {
         val results = mutableListOf<FixtureResult>()
 
         for (fixture in fixtures) {
-            val plugin = pluginRegistry[fixture.pluginName]
-            if (plugin == null) {
+            if (fixture.pluginName !in registeredPluginNames) {
                 results += FixtureResult(
                     fixture = fixture,
                     status = Status.SKIPPED,
@@ -89,10 +92,7 @@ class PluginFixtureTest {
                 continue
             }
 
-            results += executeFixtureWithTimeout(
-                fixture = fixture,
-                plugin = plugin,
-            )
+            results += executeFixtureWithTimeout(fixture)
         }
 
         printReport(results)
@@ -132,13 +132,12 @@ class PluginFixtureTest {
      */
     private fun executeFixtureWithTimeout(
         fixture: PluginFixture,
-        plugin: svgokt.domain.plugins.Plugin<*>,
     ): FixtureResult {
         val executor = Executors.newSingleThreadExecutor { runnable ->
             Thread(runnable).apply { isDaemon = true }
         }
         return try {
-            val future = executor.submit(Callable { runFixtureBlocking(fixture, plugin) })
+            val future = executor.submit(Callable { runFixtureBlocking(fixture) })
             try {
                 future.get(FIXTURE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             } catch (e: TimeoutException) {
@@ -168,26 +167,31 @@ class PluginFixtureTest {
         }
     }
 
+    /**
+     * Runs a fixture through the full Svgo.optimize() pipeline, matching
+     * the JS test harness behavior where each fixture calls
+     * `optimize(input, { path, plugins: [{ name, params }], js2svg: { pretty: true } })`.
+     */
     private fun runFixtureBlocking(
         fixture: PluginFixture,
-        plugin: svgokt.domain.plugins.Plugin<*>,
     ): FixtureResult = runBlocking {
         val fixtureParams = fixture.parseParams()
-        val mergedParams = mergeParams(
-            pluginDefault = plugin.params ?: NoPluginParam,
-            fixtureOverride = fixtureParams,
+        val pluginConfig = buildPluginConfig(
+            name = fixture.pluginName,
+            params = fixtureParams,
         )
         val multipass = if (singlePassPlugins.contains(fixture.pluginName)) 1 else 2
+        val svgo = svgo {}
 
         var lastResultData = fixture.input
         for (pass in 1..multipass) {
-            val output = runPlugin(
-                input = lastResultData,
-                filePath = fixture.filePath,
-                pluginFn = plugin.fn,
-                params = mergedParams,
+            val config = Config(
+                path = fixture.filePath,
+                plugins = listOf(pluginConfig),
+                js2svg = prettyOptions,
             )
-            val normalizedOutput = normalize(output)
+            val result = svgo.optimize(input = lastResultData, config = config)
+            val normalizedOutput = normalize(result.data)
             val normalizedExpected = normalize(fixture.expected)
 
             if (normalizedOutput != normalizedExpected) {
@@ -199,44 +203,27 @@ class PluginFixtureTest {
                     actual = normalizedOutput,
                 )
             }
-            lastResultData = output
+            lastResultData = result.data
         }
         FixtureResult(fixture = fixture, status = Status.PASSED)
     }
 
-    private suspend fun runPlugin(
-        input: String,
-        filePath: String,
-        pluginFn: PluginFn?,
-        params: PluginParams,
-    ): String {
-        val parser = SvgoParser()
-        val root = parser.parseSvg(data = input, from = filePath)
-        val info = PluginInfo(path = filePath, multipassCount = 0)
-
-        val fn = requireNotNull(pluginFn) { "Plugin fn is null" }
-        val visitor = fn(root, params, info)
-        if (visitor != null) {
-            root.visit(visitor = visitor)
-        }
-
-        return stringifySvg(data = root, userOptions = prettyOptions)
-    }
-
     /**
-     * Merges fixture-provided params on top of the plugin's default params.
-     * Fixture params take precedence.
+     * Builds the appropriate [PluginConfig] for a fixture.
+     *
+     * In the JS test, the plugin config is `{ name, params: fixtureParams || {} }`.
+     * When fixture params are present, we use [PluginConfig.BuiltinWithParams].
+     * Otherwise, we use [PluginConfig.BuiltinByName] which passes empty params
+     * (matching the JS behavior where `params` defaults to `{}`).
      */
-    private fun mergeParams(
-        pluginDefault: PluginParams,
-        fixtureOverride: PluginParams?,
-    ): PluginParams {
-        if (fixtureOverride == null) return pluginDefault
-        val merged = buildMap {
-            putAll(pluginDefault)
-            putAll(fixtureOverride)
+    private fun buildPluginConfig(
+        name: String,
+        params: PluginParams?,
+    ): PluginConfig {
+        if (params != null) {
+            return PluginConfig.BuiltinWithParams(name = name, params = params)
         }
-        return object : PluginParams, Map<String, Any> by merged {}
+        return PluginConfig.BuiltinByName(name = name)
     }
 
     private fun normalize(text: String): String =
