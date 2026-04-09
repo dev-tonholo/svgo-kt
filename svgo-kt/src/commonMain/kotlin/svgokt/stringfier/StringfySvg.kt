@@ -153,7 +153,7 @@ private fun stringifyDoctype(
     node: XastDoctype,
     config: StringifyOptions,
 ): String = config.doctypeStart +
-    node.data +
+    node.data.doctype +
     config.doctypeEnd
 
 private fun stringifyElement(
@@ -216,11 +216,6 @@ private fun createNotEmptyElement(
 
     val children = stringifyNode(node, config, elementState)
 
-    // Would it work without the following commented logic?
-//    if (state.textContext === node) {
-//        state.textContext = null;
-//    }
-
     return openIndent +
         tagOpenStart +
         node.name +
@@ -236,7 +231,7 @@ private fun createNotEmptyElement(
 private fun stringifyInstruction(
     node: XastInstruction,
     config: StringifyOptions,
-): String = "${config.procInstStart}${node.name} ${node.value}${config.procInstStart}"
+): String = "${config.procInstStart}${node.name} ${node.value}${config.procInstEnd}"
 
 private fun stringifyText(
     node: XastText,
@@ -247,7 +242,7 @@ private fun stringifyText(
     node.value.replace(requireNotNull(config.regEntities)) {
         requireNotNull(config.encodeEntity)(it.value.single())
     } +
-    if (state.textContext == null) "" else config.textEnd
+    if (state.textContext != null) "" else config.textEnd
 
 private fun stringifyAttributes(
     node: XastElement,
