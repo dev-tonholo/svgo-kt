@@ -4,7 +4,6 @@ import dev.tonholo.kss.lexer.css.CssTokenizer
 import dev.tonholo.kss.parser.ast.css.CssCombinator
 import dev.tonholo.kss.parser.ast.css.CssParser
 import dev.tonholo.kss.parser.ast.css.consumer.CssConsumers
-import dev.tonholo.kss.parser.ast.css.syntax.node.CssLocation
 import dev.tonholo.kss.parser.ast.css.syntax.node.Prelude
 import dev.tonholo.kss.parser.ast.css.syntax.node.QualifiedRule
 import dev.tonholo.kss.parser.ast.css.syntax.node.Selector
@@ -38,10 +37,7 @@ internal data class ResolvedSelector(
 /**
  * Parses a CSS selector string into a list of [ResolvedSelector]s.
  *
- * Selectors that start with a type name or class/id/pseudo-class prefix are
- * delegated to the kss parser via a fake rule (`selector { }`). Selectors
- * starting with `*` or `[` are handled by a lightweight fallback parser
- * because the kss tokenizer does not recognise these characters at position 0.
+ * Selectors are delegated to the kss parser via a fake rule (`selector { }`).
  *
  * `:not()` pseudo-classes are extracted and parsed separately so the negation
  * logic can be applied during matching without relying on the kss parser's
@@ -68,19 +64,17 @@ internal fun parseResolvedSelectors(selector: String): List<ResolvedSelector> =
 private fun resolveSelector(selector: String): ResolvedSelector? {
     val notMatches = NOT_PSEUDO_REGEX.findAll(selector).toList()
     if (notMatches.isEmpty()) {
-        val base = tryParseViaKss(selector) ?: parseFallback(selector) ?: return null
+        val base = tryParseViaKss(selector) ?: return null
         return ResolvedSelector(base = base, negations = emptyList())
     }
 
     // Strip all :not(...) occurrences to get the base selector.
     val baseSelectorText = NOT_PSEUDO_REGEX.replace(selector, "").trim().ifEmpty { "*" }
-    val base = tryParseViaKss(baseSelectorText)
-        ?: parseFallback(baseSelectorText)
-        ?: return null
+    val base = tryParseViaKss(baseSelectorText) ?: return null
 
     val negations = notMatches.mapNotNull { match ->
         val inner = match.groupValues[1].trim()
-        tryParseViaKss(inner) ?: parseFallback(inner)
+        tryParseViaKss(inner)
     }
 
     return ResolvedSelector(base = base, negations = negations)
@@ -99,13 +93,12 @@ internal fun parseSelectorListItems(selector: String): List<SelectorListItem> =
         if (UNSUPPORTED_COMBINATOR_TOKENS.any { token -> trimmed.contains(token) }) {
             return@mapNotNull null
         }
-        tryParseViaKss(trimmed) ?: parseFallback(trimmed)
+        tryParseViaKss(trimmed)
     }
 
 /**
- * Attempts to parse [selector] by wrapping it in a fake rule and using the
- * kss CSS parser. Returns `null` when the kss tokenizer rejects the input
- * (e.g. when the selector starts with `*` or `[`).
+ * Parses [selector] by wrapping it in a fake rule and using the kss CSS parser.
+ * Returns `null` when the kss parser rejects the input.
  */
 @Suppress("ReturnCount")
 internal fun tryParseViaKss(selector: String): SelectorListItem? {
@@ -125,81 +118,6 @@ internal fun tryParseViaKss(selector: String): SelectorListItem? {
     }
 }
 
-/**
- * A lightweight fallback that hand-parses simple selectors the kss tokenizer
- * cannot handle at position 0 (universal selector `*` and attribute selectors
- * `[attr]` / `[attr=value]`).
- *
- * Compound selectors such as `*.cls` or `[disabled].active` are supported
- * by splitting on simple-selector boundaries.
- */
-@Suppress("ReturnCount")
-internal fun parseFallback(selector: String): SelectorListItem? {
-    val simpleSelectors = mutableListOf<Selector>()
-    var remaining = selector.trim()
-
-    while (remaining.isNotEmpty()) {
-        when {
-            remaining.startsWith("*") -> {
-                simpleSelectors += Selector.Type(
-                    location = CssLocation.Undefined,
-                    name = "*",
-                )
-                remaining = remaining.removePrefix("*")
-            }
-
-            remaining.startsWith("[") -> {
-                val closeBracket = remaining.indexOf(']')
-                if (closeBracket < 0) return null
-                val attrExpr = remaining.substring(startIndex = 1, endIndex = closeBracket)
-                simpleSelectors += parseAttributeSelector(attrExpr) ?: return null
-                remaining = remaining.substring(startIndex = closeBracket + 1)
-            }
-
-            else -> {
-                // Hand off any remaining tail (e.g. `.cls` after `*`) to kss.
-                val tailItem = tryParseViaKss(remaining) ?: return null
-                simpleSelectors.addAll(tailItem.selectors)
-                remaining = ""
-            }
-        }
-    }
-
-    if (simpleSelectors.isEmpty()) return null
-
-    return SelectorListItem(
-        location = CssLocation.Undefined,
-        selectors = simpleSelectors,
-    )
-}
-
-/** Parses `attr`, `attr=value`, `attr~=value`, etc. from inside `[...]`. */
-@Suppress("ReturnCount")
-internal fun parseAttributeSelector(attrExpr: String): Selector? {
-    // Look for matcher operators in order of longest-first to avoid prefix conflicts.
-    val matchers = listOf("~=", "|=", "^=", "$=", "*=", "=")
-    for (matcher in matchers) {
-        val idx = attrExpr.indexOf(matcher)
-        if (idx >= 0) {
-            val name = attrExpr.substring(startIndex = 0, endIndex = idx).trim()
-            val rawValue = attrExpr.substring(startIndex = idx + matcher.length).trim()
-            val value = rawValue.removeSurrounding("\"").removeSurrounding("'")
-            return Selector.Attribute(
-                location = CssLocation.Undefined,
-                name = name,
-                matcher = matcher,
-                value = value,
-            )
-        }
-    }
-    // Presence-only selector: [attr]
-    val name = attrExpr.trim()
-    if (name.isEmpty()) return null
-    return Selector.Attribute(
-        location = CssLocation.Undefined,
-        name = name,
-    )
-}
 
 /**
  * Checks whether [element] matches a single [SelectorListItem], which is a
