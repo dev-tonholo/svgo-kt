@@ -249,6 +249,10 @@ private fun stringifyAttributes(
     config: StringifyOptions,
 ): String = buildString {
     for ((name, value) in node.attributes) {
+        if (value == XastElement.VALUELESS_ATTRIBUTE) {
+            append(" $name")
+            continue
+        }
         val encodedValue = value.replace(requireNotNull(config.regValEntities)) {
             requireNotNull(config.encodeEntity)(it.value.single())
         }

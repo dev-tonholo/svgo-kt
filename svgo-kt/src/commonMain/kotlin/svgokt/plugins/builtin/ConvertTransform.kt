@@ -109,8 +109,8 @@ private fun resolveParams(pluginParams: PluginParams): TransformParams {
 
 private fun resolveDegPrecision(pluginParams: PluginParams, default: Int?): Int? {
     val value = pluginParams["degPrecision"] ?: return default
-    return when (value) {
-        is Number -> value.toInt()
+    return when {
+        value is Number && value.toInt() >= 0 -> value.toInt()
         else -> default
     }
 }

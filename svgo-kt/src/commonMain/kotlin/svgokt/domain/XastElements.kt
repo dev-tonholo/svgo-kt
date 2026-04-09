@@ -70,4 +70,16 @@ data class XastElement(
     val attributes: MutableMap<String, String>,
     override val children: MutableList<XastChild>,
     override val type: XastElementType = XastElementType.ELEMENT,
-) : XastChild, XastParent
+) : XastChild, XastParent {
+    companion object {
+        /**
+         * Sentinel value representing a valueless (boolean) attribute.
+         *
+         * In HTML/SVG, attributes like `data-icon` have no value. In JS this
+         * is represented as `undefined`. Since Kotlin maps cannot hold
+         * `undefined`, this sentinel is stored as the value and the
+         * stringifier omits the `="..."` portion when it encounters it.
+         */
+        const val VALUELESS_ATTRIBUTE: String = "\u0000__valueless__"
+    }
+}

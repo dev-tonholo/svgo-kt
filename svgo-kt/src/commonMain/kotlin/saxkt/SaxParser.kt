@@ -318,7 +318,7 @@ internal class SaxParser(
                         if (currentChar == '[') {
                             state = Sax.State.DOCTYPE_DTD
                         } else if (currentChar.isQuote()) {
-                            state = Sax.State.DOCTYPE_DTD_QUOTED
+                            state = Sax.State.DOCTYPE_QUOTED
                             q = currentChar
                         }
                     }

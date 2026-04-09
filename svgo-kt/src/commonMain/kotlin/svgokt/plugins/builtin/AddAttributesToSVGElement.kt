@@ -2,6 +2,7 @@
 
 package svgokt.plugins.builtin
 
+import svgokt.domain.XastElement
 import svgokt.domain.XastElementType
 import svgokt.domain.builder.plugins.plugin
 import svgokt.domain.plugins.NoPluginParam
@@ -44,7 +45,8 @@ val AddAttributesToSVGElement = plugin<NoPluginParam> {
                             when (attribute) {
                                 is String -> {
                                     if (!node.attributes.containsKey(attribute)) {
-                                        node.attributes[attribute] = ""
+                                        node.attributes[attribute] =
+                                            XastElement.VALUELESS_ATTRIBUTE
                                     }
                                 }
                                 is Map<*, *> -> {
