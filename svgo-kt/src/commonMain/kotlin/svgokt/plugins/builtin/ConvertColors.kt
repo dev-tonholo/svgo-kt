@@ -21,9 +21,11 @@ import kotlin.math.roundToInt
  * - Long hex to short hex (e.g. #ff0000 -> #f00)
  * - Hex to short named color when shorter (e.g. #f00 -> red)
  * - Optional case conversion (lower/upper)
+ * - Optional currentColor conversion
  */
 object ConvertColors : Plugin<ConvertColors.Params> {
     data class Params(
+        val currentColor: Any = false,
         val names2hex: Boolean = true,
         val rgb2hex: Boolean = true,
         val convertCase: ConvertCase = ConvertCase.LOWER,
@@ -31,6 +33,7 @@ object ConvertColors : Plugin<ConvertColors.Params> {
         val shortname: Boolean = true,
     ) : PluginParams,
         Map<String, Any> by mapOf(
+            "currentColor" to false,
             "names2hex" to names2hex,
             "rgb2hex" to rgb2hex,
             "convertCase" to convertCase,
@@ -45,11 +48,21 @@ object ConvertColors : Plugin<ConvertColors.Params> {
         "converts colors: rgb() to #rrggbb and #rrggbb to #rgb"
     override val params: Params = Params()
     override val fn: PluginFn = { _, pluginParams, _ ->
-        val resolvedParams = pluginParams as? Params ?: Params()
+        val resolvedParams = resolveParams(pluginParams)
+        var maskCounter = 0
+
         Visitor(
             element = VisitorNode(
                 onEnter = { node, parentNode ->
-                    onEnter(node, parentNode, resolvedParams)
+                    if (node.name == "mask") {
+                        maskCounter++
+                    }
+                    onEnter(node, parentNode, resolvedParams, maskCounter)
+                },
+                onExit = { node, _ ->
+                    if (node.name == "mask") {
+                        maskCounter--
+                    }
                 },
             ),
         )
@@ -72,16 +85,40 @@ object ConvertColors : Plugin<ConvertColors.Params> {
     private const val SHORT_HEX_G_INDEX = 3
     private const val SHORT_HEX_B_INDEX = 5
 
+    private fun resolveParams(pluginParams: PluginParams): Params {
+        if (pluginParams is Params) return pluginParams
+        val defaults = Params()
+        val currentColorRaw = pluginParams["currentColor"] ?: defaults.currentColor
+        val convertCaseRaw = pluginParams["convertCase"]
+        val convertCase = when (convertCaseRaw) {
+            is ConvertCase -> convertCaseRaw
+            "lower" -> ConvertCase.LOWER
+            "upper" -> ConvertCase.UPPER
+            false -> ConvertCase.NONE
+            else -> defaults.convertCase
+        }
+        return Params(
+            currentColor = currentColorRaw,
+            names2hex = (pluginParams["names2hex"] as? Boolean) ?: defaults.names2hex,
+            rgb2hex = (pluginParams["rgb2hex"] as? Boolean) ?: defaults.rgb2hex,
+            convertCase = convertCase,
+            shorthex = (pluginParams["shorthex"] as? Boolean) ?: defaults.shorthex,
+            shortname = (pluginParams["shortname"] as? Boolean) ?: defaults.shortname,
+        )
+    }
+
     @Suppress("UnusedParameter")
     private fun onEnter(
         node: XastElement,
         parentNode: XastParent?,
         params: Params,
+        maskCounter: Int,
     ): VisitState {
         for ((attrName, attrValue) in node.attributes) {
             if (attrName !in Collections.colorsProps) continue
 
             var value = attrValue
+            value = convertToCurrentColor(value, params, maskCounter)
             value = convertNameToHex(value, params)
             value = convertRgbToHex(value, params)
             value = applyCase(value, params)
@@ -91,6 +128,24 @@ object ConvertColors : Plugin<ConvertColors.Params> {
             node.attributes[attrName] = value
         }
         return VisitState.Continue
+    }
+
+    private fun convertToCurrentColor(
+        value: String,
+        params: Params,
+        maskCounter: Int,
+    ): String {
+        val currentColor = params.currentColor
+        if (currentColor == false) return value
+        if (maskCounter > 0) return value
+
+        val matched = when (currentColor) {
+            is String -> value == currentColor
+            is Regex -> currentColor.containsMatchIn(value)
+            true -> value != "none"
+            else -> false
+        }
+        return if (matched) "currentColor" else value
     }
 
     private fun convertNameToHex(value: String, params: Params): String {

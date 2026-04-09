@@ -1,7 +1,7 @@
 package svgokt
 
 object Tools {
-    private val regReferencesUrl = """\burl\((["'])?#(.+?)\1\)""".toRegex()
+    private val regReferencesUrl = """\burl\((?:(["'])#.+?\1|#[^)]+)\)""".toRegex()
 
     /**
      * For example, a string that contains one or more of the following would match and
