@@ -1,6 +1,9 @@
 package svgokt.plugins.builtin
 
 import svgokt.domain.XastElement
+import svgokt.domain.XastRoot
+import svgokt.domain.css.ComputedStyles
+import svgokt.domain.css.Stylesheet
 import svgokt.domain.plugins.Plugin
 import svgokt.domain.plugins.PluginFn
 import svgokt.domain.plugins.PluginParams
@@ -11,9 +14,15 @@ import svgokt.path.PathDataItem
 import svgokt.path.js2path
 import svgokt.path.path2js
 import svgokt.path.stringifyPathData
+import svgokt.plugins.xast.collectStylesheet
 import svgokt.plugins.xast.visit
+import svgokt.style.computeStyle
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.acos
 import kotlin.math.floor
+import kotlin.math.hypot
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -126,10 +135,16 @@ class ConvertPathData(
             }
         }
 
+        val stylesheet = collectStylesheet(root)
+
         Visitor(
             element = VisitorNode(
                 onEnter = { node, _ ->
-                    processElement(node = node, effectiveParams = resolvedParams)
+                    processElement(
+                        node = node,
+                        effectiveParams = resolvedParams,
+                        stylesheet = stylesheet,
+                    )
                 },
             ),
         )
@@ -176,6 +191,7 @@ class ConvertPathData(
         private fun processElement(
             node: XastElement,
             effectiveParams: ConvertPathDataParams,
+            stylesheet: Stylesheet,
         ): VisitState {
             if (node.name !in PATH_ELEMS) {
                 return VisitState.Continue
@@ -198,15 +214,27 @@ class ConvertPathData(
 
             val includesVertices = optimized.any { it.command != 'm' && it.command != 'M' }
 
-            // Basic stroke/linecap detection from inline attributes
-            val strokeAttr = node.attributes["stroke"]
-            val maybeHasStroke = strokeAttr != null && strokeAttr != "none"
-            val linecapAttr = node.attributes["stroke-linecap"]
-            val maybeHasLinecap = linecapAttr != null && linecapAttr != "butt"
+            val computedStyleMap = computeStyle(stylesheet = stylesheet, node = node)
+            val hasMarkerMid = computedStyleMap["marker-mid"] != null
+
+            val strokeComputed = computedStyleMap["stroke"]
+            val maybeHasStroke = strokeComputed != null &&
+                (strokeComputed is ComputedStyles.DynamicStyle ||
+                    (strokeComputed is ComputedStyles.StaticStyle && strokeComputed.value != "none"))
+
+            val linecapComputed = computedStyleMap["stroke-linecap"]
+            val maybeHasLinecap = linecapComputed != null &&
+                (linecapComputed is ComputedStyles.DynamicStyle ||
+                    (linecapComputed is ComputedStyles.StaticStyle && linecapComputed.value != "butt"))
+
             val maybeHasStrokeAndLinecap = maybeHasStroke && maybeHasLinecap
-            val linejoinAttr = node.attributes["stroke-linejoin"]
+
+            val linejoinComputed = computedStyleMap["stroke-linejoin"]
             val isSafeToUseZ = if (maybeHasStroke) {
-                linecapAttr == "round" && linejoinAttr == "round"
+                linecapComputed is ComputedStyles.StaticStyle &&
+                    linecapComputed.value == "round" &&
+                    linejoinComputed is ComputedStyles.StaticStyle &&
+                    linejoinComputed.value == "round"
             } else {
                 true
             }
@@ -221,6 +249,7 @@ class ConvertPathData(
                 precision = precision,
                 isSafeToUseZ = isSafeToUseZ,
                 maybeHasStrokeAndLinecap = maybeHasStrokeAndLinecap,
+                hasMarkerMid = hasMarkerMid,
             )
 
             // Phase 3: convert back to absolute where shorter
@@ -247,12 +276,6 @@ class ConvertPathData(
                 precision = precision,
                 noSpaceAfterFlags = effectiveParams.noSpaceAfterFlags,
             )
-
-            // Revert if optimized version is longer
-            val newD = node.attributes["d"]
-            if (newD != null && newD.length > originalD.length) {
-                node.attributes["d"] = originalD
-            }
 
             return VisitState.Continue
         }
@@ -412,8 +435,11 @@ class ConvertPathData(
             precision: Int,
             isSafeToUseZ: Boolean = true,
             maybeHasStrokeAndLinecap: Boolean = false,
+            hasMarkerMid: Boolean = false,
         ): MutableList<PathDataItem> {
             val error = 10.0.pow(-precision)
+            val arcThreshold = params.makeArcs.threshold.toDouble()
+            val arcTolerance = params.makeArcs.tolerance.toDouble()
             val relSubpoint = doubleArrayOf(0.0, 0.0)
             val pathBase = doubleArrayOf(0.0, 0.0)
             var prev = PathDataItem(command = ' ', args = mutableListOf())
@@ -421,13 +447,14 @@ class ConvertPathData(
 
             val result = mutableListOf<PathDataItem>()
 
-            for (index in path.indices) {
+            var index = 0
+            while (index < path.size) {
                 val item = path[index]
                 var command = item.command
                 var data = item.args
                 val next = path.getOrNull(index + 1)
-                val itemBase = item.base
-                val itemCoords = item.coords
+                var itemBase = item.base
+                var itemCoords = item.coords
 
                 if (command != 'Z' && command != 'z') {
                     // Build sdata for smooth curve shorthand (prepend reflected control point)
@@ -442,8 +469,35 @@ class ConvertPathData(
                         }
                     }
 
+                    // Convert curves to arcs if possible
+                    val makeArcsResult = tryMakeArcs(
+                        path = path,
+                        index = index,
+                        command = command,
+                        sdata = sdata,
+                        item = item,
+                        prev = prev,
+                        params = params,
+                        precision = precision,
+                        error = error,
+                        arcThreshold = arcThreshold,
+                        arcTolerance = arcTolerance,
+                        relSubpoint = relSubpoint,
+                    )
+                    if (makeArcsResult != null) {
+                        if (makeArcsResult.skip) {
+                            index++
+                            continue
+                        }
+                        command = makeArcsResult.command
+                        data = makeArcsResult.data
+                        // Re-read base/coords since tryMakeArcs may modify them
+                        itemBase = item.base
+                        itemCoords = item.coords
+                    }
+
                     // Rounding relative coordinates with accumulating error correction
-                    if (precision > 0) {
+                    if (precision >= 0) {
                         applyAccumulatingRound(
                             command = command,
                             data = data,
@@ -520,6 +574,7 @@ class ConvertPathData(
 
                     // Collapse repeated commands
                     if (params.collapseRepeated &&
+                        !hasMarkerMid &&
                         (command == 'm' || command == 'h' || command == 'v') &&
                         prev.command.lowercaseChar() == command &&
                         ((command != 'h' && command != 'v') ||
@@ -530,6 +585,7 @@ class ConvertPathData(
                             prev.args[1] += data[1]
                         }
                         prev.coords = itemCoords?.copyOf()
+                        index++
                         continue
                     }
 
@@ -556,9 +612,11 @@ class ConvertPathData(
                                 command == 'c' || command == 's') &&
                             data.all { it == 0.0 }
                         ) {
+                            index++
                             continue
                         }
                         if (command == 'a' && data[ARC_END_X_INDEX] == 0.0 && data[ARC_END_Y_INDEX] == 0.0) {
+                            index++
                             continue
                         }
                     }
@@ -589,6 +647,7 @@ class ConvertPathData(
                     relSubpoint[1] = pathBase[1]
                     // Remove consecutive z commands
                     if (prev.command == 'Z' || prev.command == 'z') {
+                        index++
                         continue
                     }
                 }
@@ -601,6 +660,7 @@ class ConvertPathData(
                     if (abs(itemBase[0] - itemCoords[0]) < error / 10 &&
                         abs(itemBase[1] - itemCoords[1]) < error / 10
                     ) {
+                        index++
                         continue
                     }
                 }
@@ -627,6 +687,7 @@ class ConvertPathData(
 
                 result.add(item)
                 prev = item
+                index++
             }
 
             return result
@@ -661,7 +722,7 @@ class ConvertPathData(
                     data[ARC_END_Y_INDEX] += itemBase[1] - relSubpoint[1]
                 }
             }
-            strongRound(data = data, precision = precision, command = command)
+            applyRound(data = data, precision = precision, command = command)
         }
 
         private fun updateRelSubpoint(
@@ -680,7 +741,43 @@ class ConvertPathData(
                     }
                 }
             }
-            strongRound(data = relSubpoint, precision = precision)
+            applyRound(data = relSubpoint, precision = precision)
+        }
+
+        /**
+         * Simple rounding function used when precision is 0.
+         */
+        private fun simpleRound(data: MutableList<Double>) {
+            for (i in data.indices) {
+                data[i] = jsRound(data[i])
+            }
+        }
+
+        private fun simpleRound(data: DoubleArray) {
+            for (i in data.indices) {
+                data[i] = jsRound(data[i])
+            }
+        }
+
+        /**
+         * Dispatch to strongRound or simpleRound depending on precision.
+         * When precision > 0, use strongRound (smart rounding).
+         * When precision == 0, use simpleRound (Math.round).
+         */
+        private fun applyRound(data: MutableList<Double>, precision: Int, command: Char = ' ') {
+            if (precision > 0) {
+                strongRound(data = data, precision = precision, command = command)
+            } else {
+                simpleRound(data)
+            }
+        }
+
+        private fun applyRound(data: DoubleArray, precision: Int) {
+            if (precision > 0) {
+                strongRound(data = data, precision = precision)
+            } else {
+                simpleRound(data)
+            }
         }
 
         /**
@@ -936,6 +1033,368 @@ class ConvertPathData(
         }
 
         /**
+         * Result of tryMakeArcs: either skip the current item entirely, or
+         * replace it with a new command/data pair.
+         */
+        private data class MakeArcsResult(
+            val command: Char,
+            val data: MutableList<Double>,
+            val skip: Boolean = false,
+        )
+
+        /**
+         * Compute the distance between two points.
+         */
+        private fun getDistance(point1: DoubleArray, point2: DoubleArray): Double =
+            hypot(point1[0] - point2[0], point1[1] - point2[1])
+
+        /**
+         * Returns coordinates of the cubic bezier point for a given t.
+         */
+        private fun getCubicBezierPoint(curve: List<Double>, t: Double): DoubleArray {
+            val sqrT = t * t
+            val cubT = sqrT * t
+            val mt = 1 - t
+            val sqrMt = mt * mt
+            return doubleArrayOf(
+                3 * sqrMt * t * curve[0] + 3 * mt * sqrT * curve[2] + cubT * curve[4],
+                3 * sqrMt * t * curve[1] + 3 * mt * sqrT * curve[3] + cubT * curve[5],
+            )
+        }
+
+        /**
+         * Computes line equations by two points and returns their intersection point.
+         */
+        private fun getIntersection(coords: DoubleArray): DoubleArray? {
+            val a1 = coords[1] - coords[3]
+            val b1 = coords[2] - coords[0]
+            val c1 = coords[0] * coords[3] - coords[2] * coords[1]
+            val a2 = coords[5] - coords[7]
+            val b2 = coords[6] - coords[4]
+            val c2 = coords[4] * coords[7] - coords[5] * coords[6]
+            val denom = a1 * b2 - a2 * b1
+            if (denom == 0.0) return null
+            val cross = doubleArrayOf(
+                (b1 * c2 - b2 * c1) / denom,
+                (a1 * c2 - a2 * c1) / -denom,
+            )
+            if (cross[0].isNaN() || cross[1].isNaN() || !cross[0].isFinite() || !cross[1].isFinite()) {
+                return null
+            }
+            return cross
+        }
+
+        /**
+         * Checks if a curve is convex by verifying control points lie in expected region.
+         */
+        private fun isConvex(data: List<Double>): Boolean {
+            val center = getIntersection(
+                doubleArrayOf(0.0, 0.0, data[2], data[3], data[0], data[1], data[4], data[5])
+            ) ?: return false
+            return (data[2] < center[0]) == (center[0] < 0.0) &&
+                (data[3] < center[1]) == (center[1] < 0.0) &&
+                (data[4] < center[0]) == (center[0] < data[0]) &&
+                (data[5] < center[1]) == (center[1] < data[1])
+        }
+
+        /**
+         * Finds a circle by 3 points of the curve and checks if the curve fits it.
+         */
+        private fun findCircle(
+            curve: List<Double>,
+            arcThreshold: Double,
+            arcTolerance: Double,
+            error: Double,
+        ): Circle? {
+            val midPoint = getCubicBezierPoint(curve, t = 0.5)
+            val m1 = doubleArrayOf(midPoint[0] / 2, midPoint[1] / 2)
+            val m2 = doubleArrayOf((midPoint[0] + curve[4]) / 2, (midPoint[1] + curve[5]) / 2)
+            val center = getIntersection(
+                doubleArrayOf(
+                    m1[0], m1[1],
+                    m1[0] + m1[1], m1[1] - m1[0],
+                    m2[0], m2[1],
+                    m2[0] + (m2[1] - midPoint[1]), m2[1] - (m2[0] - midPoint[0]),
+                )
+            ) ?: return null
+            val radius = getDistance(doubleArrayOf(0.0, 0.0), center)
+            val tolerance = min(arcThreshold * error, arcTolerance * radius / 100)
+
+            if (radius >= 1e15) return null
+            val fits = doubleArrayOf(0.25, 0.75).all { t ->
+                abs(getDistance(getCubicBezierPoint(curve, t), center) - radius) <= tolerance
+            }
+            if (!fits) return null
+            return Circle(center = center, radius = radius)
+        }
+
+        /**
+         * Checks if a curve fits the given circle.
+         */
+        private fun isArc(
+            curve: List<Double>,
+            circle: Circle,
+            arcThreshold: Double,
+            arcTolerance: Double,
+            error: Double,
+        ): Boolean {
+            val tolerance = min(arcThreshold * error, arcTolerance * circle.radius / 100)
+            return doubleArrayOf(0.0, 0.25, 0.5, 0.75, 1.0).all { t ->
+                abs(getDistance(getCubicBezierPoint(curve, t), circle.center) - circle.radius) <= tolerance
+            }
+        }
+
+        /**
+         * Checks if a previous curve fits the given circle
+         * (adjusted by the curve's endpoint offset).
+         */
+        private fun isArcPrev(
+            curve: List<Double>,
+            circle: Circle,
+            arcThreshold: Double,
+            arcTolerance: Double,
+            error: Double,
+        ): Boolean = isArc(
+            curve = curve,
+            circle = Circle(
+                center = doubleArrayOf(circle.center[0] + curve[4], circle.center[1] + curve[5]),
+                radius = circle.radius,
+            ),
+            arcThreshold = arcThreshold,
+            arcTolerance = arcTolerance,
+            error = error,
+        )
+
+        /**
+         * Finds angle of a curve fitting the given arc.
+         */
+        private fun findArcAngle(curve: List<Double>, relCircle: Circle): Double {
+            val x1 = -relCircle.center[0]
+            val y1 = -relCircle.center[1]
+            val x2 = curve[4] - relCircle.center[0]
+            val y2 = curve[5] - relCircle.center[1]
+            return acos(
+                (x1 * x2 + y1 * y2) / sqrt((x1 * x1 + y1 * y1) * (x2 * x2 + y2 * y2))
+            )
+        }
+
+        /**
+         * Converts path data to string for length comparison during makeArcs.
+         */
+        private fun data2Path(params: ConvertPathDataParams, pathData: List<PathDataItem>, precision: Int): String {
+            val sb = StringBuilder()
+            for (item in pathData) {
+                sb.append(item.command)
+                if (item.args.isNotEmpty()) {
+                    val rounded = item.args.toMutableList()
+                    strongRound(data = rounded, precision = precision)
+                    sb.append(stringifyArgs(data = rounded, precision = precision, params = params))
+                }
+            }
+            return sb.toString()
+        }
+
+        /**
+         * Try converting cubic curves to arcs.
+         * Mirrors the makeArcs logic from the JS reference.
+         */
+        @Suppress(
+            "CyclomaticComplexity",
+            "CyclomaticComplexMethod",
+            "LongMethod",
+            "NestedBlockDepth",
+            "LongParameterList",
+            "ReturnCount",
+        )
+        private fun tryMakeArcs(
+            path: MutableList<PathDataItem>,
+            index: Int,
+            command: Char,
+            sdata: List<Double>,
+            item: PathDataItem,
+            prev: PathDataItem,
+            params: ConvertPathDataParams,
+            precision: Int,
+            error: Double,
+            arcThreshold: Double,
+            arcTolerance: Double,
+            relSubpoint: DoubleArray,
+        ): MakeArcsResult? {
+            if (command != 'c' && command != 's') return null
+            if (!isConvex(sdata)) return null
+            val circle = findCircle(
+                curve = sdata,
+                arcThreshold = arcThreshold,
+                arcTolerance = arcTolerance,
+                error = error,
+            ) ?: return null
+
+            val radiusList = mutableListOf(circle.radius)
+            strongRound(data = radiusList, precision = precision)
+            val r = radiusList.first()
+            var angle = findArcAngle(sdata, circle)
+            val sweep = if (sdata[5] * sdata[0] - sdata[4] * sdata[1] > 0) 1.0 else 0.0
+            var arc = PathDataItem(
+                command = 'a',
+                args = mutableListOf(r, r, 0.0, 0.0, sweep, sdata[4], sdata[5]),
+            )
+            arc.coords = item.coords?.copyOf()
+            arc.base = item.base
+
+            val output = mutableListOf(arc)
+            val relCenter = doubleArrayOf(circle.center[0] - sdata[4], circle.center[1] - sdata[5])
+            val relCircle = Circle(center = relCenter, radius = circle.radius)
+            val arcCurves = mutableListOf(item)
+            var hasPrev = 0
+            var suffix = ""
+
+            // Check if previous curve also fits the same arc
+            if ((prev.command == 'c' && isConvex(prev.args) &&
+                    isArcPrev(prev.args, circle, arcThreshold, arcTolerance, error)) ||
+                (prev.command == 'a' && prev.sdata != null &&
+                    isArcPrev(requireNotNull(prev.sdata), circle, arcThreshold, arcTolerance, error))
+            ) {
+                arcCurves.add(index = 0, element = prev)
+                arc.base = prev.base
+                val arcBase = requireNotNull(arc.base)
+                val arcCoords = requireNotNull(arc.coords)
+                arc.args[ARC_END_X_INDEX] = arcCoords[0] - arcBase[0]
+                arc.args[ARC_END_Y_INDEX] = arcCoords[1] - arcBase[1]
+                val prevData = if (prev.command == 'a') requireNotNull(prev.sdata) else prev.args
+                val prevAngle = findArcAngle(
+                    prevData,
+                    Circle(
+                        center = doubleArrayOf(prevData[4] + circle.center[0], prevData[5] + circle.center[1]),
+                        radius = circle.radius,
+                    ),
+                )
+                angle += prevAngle
+                if (angle > PI) {
+                    arc.args[ARC_LARGE_ARC_INDEX] = 1.0
+                }
+                hasPrev = 1
+            }
+
+            // Check if next curves fit the arc
+            var j = index
+            while (true) {
+                j++
+                val nextItem = path.getOrNull(j) ?: break
+                if (nextItem.command != 'c' && nextItem.command != 's') break
+                var nextData = nextItem.args.toList()
+                var nextLonghand: PathDataItem? = null
+                if (nextItem.command == 's') {
+                    nextLonghand = PathDataItem(
+                        command = 's',
+                        args = nextItem.args.toMutableList(),
+                    )
+                    makeLonghand(item = nextLonghand, prevData = path[j - 1].args)
+                    nextData = nextLonghand.args.toList()
+                    val firstTwo = nextData.subList(fromIndex = 0, toIndex = 2)
+                    nextLonghand.args.clear()
+                    nextLonghand.args.addAll(firstTwo)
+                    suffix = data2Path(params, listOf(nextLonghand), precision)
+                }
+                if (isConvex(nextData) && isArc(nextData, relCircle, arcThreshold, arcTolerance, error)) {
+                    angle += findArcAngle(nextData, relCircle)
+                    if (angle - 2 * PI > 1e-3) break
+                    if (angle > PI) {
+                        arc.args[ARC_LARGE_ARC_INDEX] = 1.0
+                    }
+                    arcCurves.add(nextItem)
+                    if (2 * PI - angle > 1e-3) {
+                        // less than 360 degrees
+                        arc.coords = nextItem.coords
+                        val arcBase = requireNotNull(arc.base)
+                        val arcCoords = requireNotNull(arc.coords)
+                        arc.args[ARC_END_X_INDEX] = arcCoords[0] - arcBase[0]
+                        arc.args[ARC_END_Y_INDEX] = arcCoords[1] - arcBase[1]
+                    } else {
+                        // full circle - make half-circle arc and add second one
+                        arc.args[ARC_END_X_INDEX] = 2 * (relCircle.center[0] - nextData[4])
+                        arc.args[ARC_END_Y_INDEX] = 2 * (relCircle.center[1] - nextData[5])
+                        val arcBase = requireNotNull(arc.base)
+                        arc.coords = doubleArrayOf(
+                            arcBase[0] + arc.args[ARC_END_X_INDEX],
+                            arcBase[1] + arc.args[ARC_END_Y_INDEX],
+                        )
+                        val nextCoords = requireNotNull(nextItem.coords)
+                        val arcCoords = requireNotNull(arc.coords)
+                        arc = PathDataItem(
+                            command = 'a',
+                            args = mutableListOf(
+                                r, r, 0.0, 0.0, sweep,
+                                nextCoords[0] - arcCoords[0],
+                                nextCoords[1] - arcCoords[1],
+                            ),
+                        )
+                        arc.coords = nextItem.coords
+                        arc.base = arcCoords
+                        output.add(arc)
+                        j++
+                        break
+                    }
+                    relCenter[0] -= nextData[4]
+                    relCenter[1] -= nextData[5]
+                } else {
+                    break
+                }
+            }
+
+            val stringify = { items: List<PathDataItem> -> data2Path(params, items, precision) }
+            if ((stringify(output) + suffix).length >= stringify(arcCurves).length) {
+                return null
+            }
+
+            // The arc is shorter - apply it
+            if (path.getOrNull(j) != null && path[j].command == 's') {
+                makeLonghand(item = path[j], prevData = path[j - 1].args)
+            }
+            if (hasPrev > 0) {
+                val prevArc = output.removeFirst()
+                strongRound(data = prevArc.args, precision = precision)
+                relSubpoint[0] += prevArc.args[ARC_END_X_INDEX] - prev.args[prev.args.size - 2]
+                relSubpoint[1] += prevArc.args[ARC_END_Y_INDEX] - prev.args[prev.args.size - 1]
+                prev.command = 'a'
+                prev.args.clear()
+                prev.args.addAll(prevArc.args)
+                item.base = prevArc.coords
+                prev.coords = prevArc.coords
+            }
+            val finalArc = output.removeFirstOrNull()
+            if (arcCurves.size == 1) {
+                item.sdata = sdata.toList()
+            } else if (arcCurves.size - 1 - hasPrev > 0) {
+                // Remove consumed next items and insert remaining output arcs
+                val removeCount = arcCurves.size - 1 - hasPrev
+                for (k in 0 until removeCount) {
+                    if (index + 1 < path.size) {
+                        path.removeAt(index + 1)
+                    }
+                }
+                for ((k, outArc) in output.withIndex()) {
+                    path.add(index + 1 + k, outArc)
+                }
+            }
+            if (finalArc == null) {
+                return MakeArcsResult(command = ' ', data = mutableListOf(), skip = true)
+            }
+            item.command = 'a'
+            item.args.clear()
+            item.args.addAll(finalArc.args)
+            item.coords = finalArc.coords
+            return MakeArcsResult(command = 'a', data = item.args)
+        }
+
+        /**
+         * Simple data class representing a circle found during makeArcs.
+         */
+        private data class Circle(
+            val center: DoubleArray,
+            val radius: Double,
+        )
+
+        /**
          * Writes data in shortest form using absolute or relative coordinates.
          * Converts relative commands back to absolute where shorter.
          */
@@ -981,8 +1440,8 @@ class ConvertPathData(
                 }
 
                 val rdata = data.toMutableList()
-                roundData(adata, precision)
-                roundData(rdata, precision)
+                applyRound(adata, precision)
+                applyRound(rdata, precision)
 
                 val absoluteStr = stringifyArgs(adata, precision, params)
                 val relativeStr = stringifyArgs(rdata, precision, params)
@@ -1009,13 +1468,6 @@ class ConvertPathData(
             }
 
             return result
-        }
-
-        private fun roundData(data: MutableList<Double>, precision: Int) {
-            val pow = 10.0.pow(precision)
-            for (i in data.indices) {
-                data[i] = jsRound(data[i] * pow) / pow
-            }
         }
 
         /**
