@@ -306,6 +306,7 @@ class InlineStyles(
             if (classAttr != null) {
                 val classList = classAttr.split(' ').toMutableSet()
                 for (className in selector.classNames) {
+                    // Don't remove if used in an attribute selector
                     val usedInAttrSelector = allSelectors.any { sel ->
                         includesAttrSelector(
                             selectorText = sel.originalSelector,
@@ -314,9 +315,15 @@ class InlineStyles(
                             checkValue = true,
                         )
                     }
-                    if (!usedInAttrSelector) {
-                        classList.remove(className)
+                    if (usedInAttrSelector) continue
+
+                    // Don't remove if still referenced by a remaining (non-removed) selector
+                    val usedInRemainingSelector = allSelectors.any { sel ->
+                        !sel.removed && sel.classNames.contains(className)
                     }
+                    if (usedInRemainingSelector) continue
+
+                    classList.remove(className)
                 }
                 if (classList.isEmpty()) {
                     element.attributes.remove("class")
@@ -336,7 +343,11 @@ class InlineStyles(
                         checkValue = true,
                     )
                 }
-                if (!usedInAttrSelector) {
+                // Don't remove if still referenced by a remaining selector
+                val usedInRemainingSelector = allSelectors.any { sel ->
+                    !sel.removed && sel.idName == idName
+                }
+                if (!usedInAttrSelector && !usedInRemainingSelector) {
                     element.attributes.remove("id")
                 }
             }
@@ -806,7 +817,9 @@ class InlineStyles(
             }
 
             for ((declKey, sels) in rulesByDecl) {
-                val selectorText = sels.joinToString(separator = ",") { it.originalSelector }
+                val selectorText = sels.joinToString(separator = ",") {
+                    minifySelector(it.originalSelector)
+                }
                 sb.append(selectorText)
                 sb.append('{')
                 sb.append(declKey)
