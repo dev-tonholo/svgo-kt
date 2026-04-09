@@ -42,9 +42,28 @@ class CollapseGroupsTest {
     }
 
     @Test
-    fun `given g with attributes - when plugin runs - then g is preserved`() = runTest {
+    fun `given g with attributes and single child - when plugin runs - then attrs merge into child`() = runTest {
         // Arrange
         val svg = """<svg xmlns="http://www.w3.org/2000/svg"><g fill="red"><rect width="10" height="10"/></g></svg>"""
+
+        // Act
+        val result = runPlugin(svg)
+
+        // Assert - g attributes should be merged into the single child element
+        assertFalse(
+            actual = result.contains("<g"),
+            message = "g with single child should be collapsed, but g still found in: $result",
+        )
+        assertTrue(
+            actual = result.contains("""fill="red""""),
+            message = "fill attribute should be merged into child, result: $result",
+        )
+    }
+
+    @Test
+    fun `given g with attributes and multiple children - when plugin runs - then g is preserved`() = runTest {
+        // Arrange
+        val svg = """<svg xmlns="http://www.w3.org/2000/svg"><g fill="red"><rect width="10" height="10"/><circle r="5"/></g></svg>"""
 
         // Act
         val result = runPlugin(svg)
@@ -52,7 +71,7 @@ class CollapseGroupsTest {
         // Assert
         assertTrue(
             actual = result.contains("<g"),
-            message = "g element with attributes should be preserved, but not found in: $result",
+            message = "g element with multiple children should be preserved, but not found in: $result",
         )
     }
 

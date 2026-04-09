@@ -1,6 +1,8 @@
 package svgokt.plugins.builtin
 
+import svgokt.domain.XastChild
 import svgokt.domain.XastElement
+import svgokt.domain.XastElementType
 import svgokt.domain.plugins.Plugin
 import svgokt.domain.plugins.PluginFn
 import svgokt.domain.plugins.PluginParams
@@ -12,10 +14,9 @@ import svgokt.domain.plugins.VisitorRoot
 /**
  * Removes unused IDs and optionally minifies referenced ones.
  *
- * Simplified version that:
- * - Collects all referenced IDs from url(#id), href="#id", xlink:href="#id"
- * - Removes unreferenced IDs from elements
- * - Skips processing when <style> or <script> elements are present (unless forced)
+ * Collects all referenced IDs from url(#id), href="#id", xlink:href="#id"
+ * and removes unreferenced IDs from elements. Skips processing when
+ * style or script elements are present (unless forced).
  */
 class CleanupIds(
     override val params: Params = Params(),
@@ -39,7 +40,8 @@ class CleanupIds(
     override val name: String = "cleanupIds"
     override val description: String = "removes unused IDs and minifies used"
 
-    override val fn: PluginFn = { _, _, _ ->
+    override val fn: PluginFn = { _, params, _ ->
+        val resolvedParams = resolveParams(params)
         val nodeById = mutableMapOf<String, XastElement>()
         val referencesById = mutableMapOf<String, MutableList<ReferenceEntry>>()
         var deoptimized = false
@@ -49,6 +51,7 @@ class CleanupIds(
                 onEnter = { node, _ ->
                     onElementEnter(
                         node = node,
+                        resolvedParams = resolvedParams,
                         nodeById = nodeById,
                         referencesById = referencesById,
                         onDeoptimized = { deoptimized = true },
@@ -58,6 +61,7 @@ class CleanupIds(
             root = VisitorRoot(
                 onExit = { _, _ ->
                     onRootExit(
+                        resolvedParams = resolvedParams,
                         deoptimized = deoptimized,
                         nodeById = nodeById,
                         referencesById = referencesById,
@@ -70,11 +74,12 @@ class CleanupIds(
     @Suppress("ReturnCount")
     private fun onElementEnter(
         node: XastElement,
+        resolvedParams: Params,
         nodeById: MutableMap<String, XastElement>,
         referencesById: MutableMap<String, MutableList<ReferenceEntry>>,
         onDeoptimized: () -> Unit,
     ): VisitState {
-        if (!params.force) {
+        if (!resolvedParams.force) {
             if (node.name == "style" && node.children.isNotEmpty()) {
                 onDeoptimized()
                 return VisitState.Continue
@@ -83,9 +88,21 @@ class CleanupIds(
                 onDeoptimized()
                 return VisitState.Continue
             }
+
+            // avoid removing IDs if the whole SVG consists only of defs
+            if (node.name == "svg") {
+                val hasDefsOnly = node.children.all { child ->
+                    child is XastElement && child.name == "defs"
+                }
+                if (hasDefsOnly) {
+                    return VisitState.Skip
+                }
+            }
         }
 
-        for ((attrName, attrValue) in node.attributes) {
+        // Iterate over a snapshot of entries to avoid ConcurrentModificationException
+        val entries = node.attributes.entries.toList()
+        for ((attrName, attrValue) in entries) {
             if (attrName == "id") {
                 if (nodeById.containsKey(attrValue)) {
                     // remove duplicate id
@@ -107,6 +124,7 @@ class CleanupIds(
 
     @Suppress("ReturnCount", "CyclomaticComplexMethod", "NestedBlockDepth")
     private fun onRootExit(
+        resolvedParams: Params,
         deoptimized: Boolean,
         nodeById: MutableMap<String, XastElement>,
         referencesById: MutableMap<String, MutableList<ReferenceEntry>>,
@@ -115,27 +133,37 @@ class CleanupIds(
             return
         }
 
+        val isIdPreserved = { id: String ->
+            resolvedParams.preserve.contains(id) ||
+                resolvedParams.preservePrefixes.any { id.startsWith(it) }
+        }
+
         var currentId: MutableList<Int>? = null
 
         for ((id, refs) in referencesById) {
             val node = nodeById[id] ?: continue
 
-            if (params.minify && !isIdPreserved(id)) {
+            if (resolvedParams.minify && !isIdPreserved(id)) {
                 var currentIdString: String
                 do {
                     currentId = generateId(currentId)
                     currentIdString = getIdString(currentId)
                 } while (
                     isIdPreserved(currentIdString) ||
-                    (referencesById.containsKey(currentIdString) && !nodeById.containsKey(currentIdString))
+                    (referencesById.containsKey(currentIdString) &&
+                        nodeById[currentIdString] == null)
                 )
 
                 node.attributes["id"] = currentIdString
                 for ((element, attributeName) in refs) {
                     val value = element.attributes[attributeName] ?: continue
                     element.attributes[attributeName] = if (value.contains('#')) {
-                        value.replace("#$id", "#$currentIdString")
+                        // Replace both URI-encoded and plain id forms
+                        value
+                            .replace("#${encodeUri(id)}", "#$currentIdString")
+                            .replace("#$id", "#$currentIdString")
                     } else {
+                        // Replace id in begin attribute
                         value.replace("$id.", "$currentIdString.")
                     }
                 }
@@ -144,7 +172,7 @@ class CleanupIds(
             nodeById.remove(id)
         }
 
-        if (params.remove) {
+        if (resolvedParams.remove) {
             for ((id, node) in nodeById) {
                 if (!isIdPreserved(id)) {
                     node.attributes.remove("id")
@@ -152,9 +180,6 @@ class CleanupIds(
             }
         }
     }
-
-    private fun isIdPreserved(id: String): Boolean =
-        params.preserve.contains(id) || params.preservePrefixes.any { id.startsWith(it) }
 
     private data class ReferenceEntry(
         val element: XastElement,
@@ -202,7 +227,8 @@ class CleanupIds(
                 }
             }
 
-            return results
+            // Decode URI-encoded references (e.g. %E4%BA%BA%E5%8F%A3 -> actual chars)
+            return results.map { decodeUri(it) }
         }
 
         private val REFERENCES_PROPS = setOf(
@@ -230,5 +256,85 @@ class CleanupIds(
 
         private fun getIdString(arr: List<Int>): String =
             arr.joinToString(separator = "") { GENERATE_ID_CHARS[it].toString() }
+
+        /**
+         * Encodes a string like JavaScript's encodeURI.
+         * Percent-encodes all characters except: A-Z a-z 0-9 - _ . ~ ! * ' ( ) ; / ? : @ & = + $ , #
+         */
+        private fun encodeUri(input: String): String {
+            val builder = StringBuilder()
+            for (byte in input.encodeToByteArray()) {
+                val c = byte.toInt().toChar()
+                if (c in URI_UNRESERVED) {
+                    builder.append(c)
+                } else {
+                    val unsigned = byte.toInt() and 0xFF
+                    builder.append('%')
+                    builder.append(HEX_DIGITS[unsigned shr 4])
+                    builder.append(HEX_DIGITS[unsigned and 0x0F])
+                }
+            }
+            return builder.toString()
+        }
+
+        private val HEX_DIGITS = "0123456789ABCDEF".toCharArray()
+
+        /**
+         * Characters that JS encodeURI does NOT encode.
+         */
+        private val URI_UNRESERVED: Set<Char> = buildSet {
+            addAll('A'..'Z')
+            addAll('a'..'z')
+            addAll('0'..'9')
+            addAll("-_.~!*'();/?:@&=+\$,#".toList())
+        }
+
+        /**
+         * Decodes a percent-encoded URI string, like JavaScript's decodeURI.
+         */
+        private fun decodeUri(input: String): String {
+            val bytes = mutableListOf<Byte>()
+            var i = 0
+            while (i < input.length) {
+                if (input[i] == '%' && i + 2 < input.length) {
+                    val hex = input.substring(startIndex = i + 1, endIndex = i + 3)
+                    val value = hex.toIntOrNull(radix = 16)
+                    if (value != null) {
+                        bytes.add(value.toByte())
+                        i += 3
+                        continue
+                    }
+                }
+                bytes.addAll(input[i].toString().encodeToByteArray().toList())
+                i++
+            }
+            return bytes.toByteArray().decodeToString()
+        }
+
+        /**
+         * Resolves the effective [Params] from the [PluginParams] passed to [fn].
+         * The integration test harness merges fixture-specific params on top of
+         * the plugin's default params, so we need to read them from the map.
+         */
+        @Suppress("UNCHECKED_CAST")
+        private fun resolveParams(pluginParams: PluginParams): Params {
+            if (pluginParams is Params) return pluginParams
+            return Params(
+                remove = pluginParams["remove"] as? Boolean ?: true,
+                minify = pluginParams["minify"] as? Boolean ?: true,
+                preserve = when (val raw = pluginParams["preserve"]) {
+                    is Set<*> -> raw as Set<String>
+                    is List<*> -> (raw as List<String>).toSet()
+                    is String -> setOf(raw)
+                    else -> emptySet()
+                },
+                preservePrefixes = when (val raw = pluginParams["preservePrefixes"]) {
+                    is List<*> -> raw as List<String>
+                    is String -> listOf(raw)
+                    else -> emptyList()
+                },
+                force = pluginParams["force"] as? Boolean ?: false,
+            )
+        }
     }
 }

@@ -113,6 +113,11 @@ object Collections {
      */
     val containerElements: Set<String> = ElementGroups.container
 
+    /**
+     * SVG animation elements.
+     */
+    val animationElements: Set<String> = ElementGroups.animation
+
     val textElements: Set<String> = buildSet {
         addAll(ElementGroups.textContent)
         add("pre")
