@@ -3,12 +3,14 @@ package svgokt.plugins.builtin
 import svgokt.domain.XastChild
 import svgokt.domain.XastElement
 import svgokt.domain.XastElementType
+import svgokt.domain.XastParent
 import svgokt.domain.plugins.NoPluginParam
 import svgokt.domain.plugins.Plugin
 import svgokt.domain.plugins.PluginFn
 import svgokt.domain.plugins.VisitState
 import svgokt.domain.plugins.Visitor
 import svgokt.domain.plugins.VisitorNode
+import svgokt.plugins.xast.detachFromParent
 
 /**
  * Finds duplicate `<path>` elements with the same `d`, `fill`, and `stroke`
@@ -21,15 +23,24 @@ object ReusePaths : Plugin<NoPluginParam> {
         "finds duplicate <path> elements and replaces them with <use> references"
     override val params: NoPluginParam = NoPluginParam
 
+    private data class PathEntry(
+        val node: XastElement,
+        val parent: XastParent,
+    )
+
     override val fn: PluginFn = { _, _, _ ->
-        val paths = mutableMapOf<String, MutableList<XastElement>>()
+        val paths = mutableMapOf<String, MutableList<PathEntry>>()
         var svgDefs: XastElement? = null
+        val hrefs = mutableSetOf<String>()
 
         Visitor(
             element = VisitorNode(
                 onEnter = { node, parentNode ->
                     // Collect path elements keyed by d+fill+stroke
-                    if (node.name == "path" && node.attributes["d"] != null) {
+                    if (node.name == "path" &&
+                        node.attributes["d"] != null &&
+                        parentNode != null
+                    ) {
                         val key = buildString {
                             append(node.attributes["d"])
                             append(";s:")
@@ -37,7 +48,8 @@ object ReusePaths : Plugin<NoPluginParam> {
                             append(";f:")
                             append(node.attributes["fill"].orEmpty())
                         }
-                        paths.getOrPut(key) { mutableListOf() }.add(node)
+                        paths.getOrPut(key) { mutableListOf() }
+                            .add(PathEntry(node = node, parent = parentNode))
                     }
 
                     // Find existing defs element
@@ -50,12 +62,24 @@ object ReusePaths : Plugin<NoPluginParam> {
                         svgDefs = node
                     }
 
+                    // Track existing use href references
+                    if (node.name == "use") {
+                        for (hrefAttr in listOf("href", "xlink:href")) {
+                            val href = node.attributes[hrefAttr]
+                            if (href != null && href.startsWith("#") && href.length > 1) {
+                                hrefs.add(href.substring(startIndex = 1))
+                            }
+                        }
+                    }
+
                     VisitState.Continue
                 },
                 onExit = { node, parentNode ->
-                    if (node.name != "svg" || parentNode?.type != XastElementType.ROOT) return@VisitorNode
+                    if (node.name != "svg" || parentNode?.type != XastElementType.ROOT) {
+                        return@VisitorNode
+                    }
 
-                    var defsTag = svgDefs ?: XastElement(
+                    val defsTag = svgDefs ?: XastElement(
                         name = "defs",
                         attributes = mutableMapOf(),
                         children = mutableListOf(),
@@ -73,28 +97,66 @@ object ReusePaths : Plugin<NoPluginParam> {
                         )
 
                         for (attr in listOf("fill", "stroke", "d")) {
-                            val value = first.attributes[attr]
+                            val value = first.node.attributes[attr]
                             if (value != null) {
                                 reusablePath.attributes[attr] = value
                             }
                         }
 
-                        reusablePath.attributes["id"] = "reuse-$index"
-                        index++
+                        // Reuse original ID when it isn't referenced elsewhere
+                        val originalId = first.node.attributes["id"]
+                        if (originalId == null || hrefs.contains(originalId)) {
+                            reusablePath.attributes["id"] = "reuse-$index"
+                            index++
+                        } else {
+                            reusablePath.attributes["id"] = originalId
+                            first.node.attributes.remove("id")
+                        }
 
                         defsTag.children.add(reusablePath as XastChild)
+                        val reusableId = checkNotNull(reusablePath.attributes["id"])
 
-                        for (pathNode in list) {
+                        // Convert paths to <use>
+                        for (entry in list) {
+                            val pathNode = entry.node
+                            val pathParent = entry.parent
+
                             pathNode.attributes.remove("d")
                             pathNode.attributes.remove("stroke")
                             pathNode.attributes.remove("fill")
-                            // We cannot change the element name in place with a data class,
-                            // so we set href and clear d to signal reuse.
-                            // The node remains a <path> structurally but acts as <use>.
-                            pathNode.attributes["xlink:href"] = "#${reusablePath.attributes["id"]}"
+
+                            // If pathNode is in defs and has no meaningful attrs, detach it
+                            if (isChildOf(pathNode, defsTag) &&
+                                pathNode.children.isEmpty()
+                            ) {
+                                if (pathNode.attributes.isEmpty()) {
+                                    removeByIdentity(pathNode, defsTag)
+                                    continue
+                                }
+                                if (pathNode.attributes.size == 1 &&
+                                    pathNode.attributes["id"] != null
+                                ) {
+                                    val oldId = pathNode.attributes["id"]
+                                    removeByIdentity(pathNode, defsTag)
+                                    if (oldId != null) {
+                                        updateHrefReferences(
+                                            root = node,
+                                            oldId = oldId,
+                                            newId = reusableId,
+                                        )
+                                    }
+                                    continue
+                                }
+                            }
+
+                            // Replace path node with a use element in parent's children
+                            replaceWithUseElement(
+                                pathNode = pathNode,
+                                parent = pathParent,
+                                reusableId = reusableId,
+                            )
                         }
                     }
-
                     if (defsTag.children.isNotEmpty()) {
                         if (node.attributes["xmlns:xlink"] == null) {
                             node.attributes["xmlns:xlink"] = "http://www.w3.org/1999/xlink"
@@ -106,5 +168,83 @@ object ReusePaths : Plugin<NoPluginParam> {
                 },
             ),
         )
+    }
+
+    /**
+     * Checks if [child] is a child of [parent] using referential identity.
+     */
+    private fun isChildOf(child: XastElement, parent: XastParent): Boolean =
+        parent.children.any { it === child }
+
+    /**
+     * Removes [child] from [parent]'s children using referential identity.
+     */
+    private fun removeByIdentity(child: XastElement, parent: XastParent) {
+        val iterator = parent.children.iterator()
+        while (iterator.hasNext()) {
+            if (iterator.next() === child) {
+                iterator.remove()
+                return
+            }
+        }
+    }
+
+    /**
+     * Finds [target] in [parent]'s children using referential identity
+     * and returns its index, or -1 if not found.
+     */
+    private fun indexByIdentity(target: XastElement, parent: XastParent): Int {
+        for (i in parent.children.indices) {
+            if (parent.children[i] === target) return i
+        }
+        return -1
+    }
+
+    /**
+     * Replaces a `<path>` node with a `<use>` element in the parent's children list.
+     * Copies over all remaining attributes and adds the xlink:href reference.
+     */
+    private fun replaceWithUseElement(
+        pathNode: XastElement,
+        parent: XastParent,
+        reusableId: String,
+    ) {
+        val useElement = XastElement(
+            name = "use",
+            attributes = mutableMapOf(),
+            children = mutableListOf(),
+        )
+
+        // Copy remaining attributes to the use element
+        for ((key, value) in pathNode.attributes) {
+            useElement.attributes[key] = value
+        }
+        useElement.attributes["xlink:href"] = "#$reusableId"
+
+        // Replace in parent's children list using referential identity
+        val idx = indexByIdentity(target = pathNode, parent = parent)
+        if (idx >= 0) {
+            parent.children[idx] = useElement
+        }
+    }
+
+    /**
+     * Updates all href/xlink:href references from [oldId] to [newId]
+     * within the subtree rooted at [root].
+     */
+    private fun updateHrefReferences(
+        root: XastElement,
+        oldId: String,
+        newId: String,
+    ) {
+        for (child in root.children) {
+            if (child !is XastElement) continue
+            for (hrefAttr in listOf("href", "xlink:href")) {
+                if (child.attributes[hrefAttr] == "#$oldId") {
+                    child.attributes[hrefAttr] = "#$newId"
+                }
+            }
+            updateHrefReferences(root = child, oldId = oldId, newId = newId)
+        }
     }
 }

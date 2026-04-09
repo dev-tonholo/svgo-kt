@@ -1,5 +1,8 @@
 package svgokt.plugins.builtin
 
+import svgokt.domain.XastCdata
+import svgokt.domain.XastComment
+import svgokt.domain.XastText
 import svgokt.domain.plugins.Plugin
 import svgokt.domain.plugins.PluginFn
 import svgokt.domain.plugins.PluginInfo
@@ -16,8 +19,9 @@ import svgokt.plugins.Collections
  * - `id` attribute values
  * - `class` attribute values
  * - `href` and `xlink:href` references (`#id`)
- * - `url(#id)` references in presentation attributes
+ * - `url(#id)` references in presentation attributes and style attributes
  * - `begin`/`end` animation event references (`id.start`, `id.end`)
+ * - Selectors and url() references inside `<style>` elements
  */
 object PrefixIds : Plugin<PrefixIds.Params> {
 
@@ -46,7 +50,22 @@ object PrefixIds : Plugin<PrefixIds.Params> {
     private const val DEFAULT_DELIM = "__"
     private const val FALLBACK_PREFIX = "prefix"
 
-    private val URL_REF_REGEX = Regex("""url\(['"]?(#[^)'"]+)['"]?\)""", RegexOption.IGNORE_CASE)
+    private val URL_REF_REGEX = Regex(
+        pattern = """\burl\((['"]?)(#.+?)\1\)""",
+        option = RegexOption.IGNORE_CASE,
+    )
+
+    /**
+     * Matches an id selector (#name) in CSS. Captures the identifier name.
+     */
+    private val CSS_ID_SELECTOR_REGEX = Regex("""#([a-zA-Z_][a-zA-Z0-9_-]*)""")
+
+    /**
+     * Matches a class selector (.name) in CSS selectors. Captures the class name.
+     * In selector context (not values), any dot followed by a valid identifier
+     * start character is a class selector.
+     */
+    private val CSS_CLASS_SELECTOR_REGEX = Regex("""\.([a-zA-Z_][a-zA-Z0-9_-]*)""")
 
     override val name: String = "prefixIds"
     override val description: String = "prefix IDs"
@@ -59,6 +78,12 @@ object PrefixIds : Plugin<PrefixIds.Params> {
             element = VisitorNode(
                 onEnter = { node, _ ->
                     val generator: (String) -> String = { id -> prefixId(computedPrefix, id) }
+
+                    // Process <style> element CSS content
+                    if (node.name == "style" && node.children.isNotEmpty()) {
+                        processStyleElement(node, resolved, generator)
+                        return@VisitorNode VisitState.Continue
+                    }
 
                     // Prefix id attribute
                     if (resolved.prefixIds) {
@@ -80,24 +105,26 @@ object PrefixIds : Plugin<PrefixIds.Params> {
                     // Prefix href / xlink:href
                     for (hrefAttr in listOf("href", "xlink:href")) {
                         val href = node.attributes[hrefAttr]
-                        if (href != null && href.startsWith("#")) {
-                            node.attributes[hrefAttr] = "#" + generator(href.substring(startIndex = 1))
+                        if (href != null && href.isNotEmpty()) {
+                            val prefixed = prefixReference(computedPrefix, href)
+                            if (prefixed != null) {
+                                node.attributes[hrefAttr] = prefixed
+                            }
                         }
                     }
 
                     // Prefix url(#...) in reference props
                     for (refProp in Collections.referencesProps) {
                         val value = node.attributes[refProp]
-                        if (value != null && value.contains("url(")) {
-                            node.attributes[refProp] = URL_REF_REGEX.replace(value) { match ->
-                                val url = match.groupValues[1]
-                                if (url.startsWith("#")) {
-                                    "url(#${generator(url.substring(startIndex = 1))})"
-                                } else {
-                                    match.value
-                                }
-                            }
+                        if (value != null && value.isNotEmpty()) {
+                            node.attributes[refProp] = prefixUrlReferences(value, generator)
                         }
+                    }
+
+                    // Prefix url(#...) in style attribute
+                    val style = node.attributes["style"]
+                    if (style != null && style.isNotEmpty()) {
+                        node.attributes["style"] = prefixUrlReferences(style, generator)
                     }
 
                     // Prefix begin/end animation references
@@ -122,6 +149,160 @@ object PrefixIds : Plugin<PrefixIds.Params> {
                 },
             ),
         )
+    }
+
+    /**
+     * Processes CSS content within a `<style>` element, prefixing id/class
+     * selectors and url() references. The CSS is minified as a side effect
+     * of parsing and regenerating (matching the JS csstree.generate behavior).
+     */
+    private fun processStyleElement(
+        node: svgokt.domain.XastElement,
+        params: Params,
+        generator: (String) -> String,
+    ) {
+        val newChildren = node.children.map { child ->
+            when (child) {
+                is XastText -> {
+                    val processed = prefixCssText(child.value, params, generator)
+                    XastText(value = processed)
+                }
+                is XastCdata -> {
+                    val processed = prefixCssText(child.value, params, generator)
+                    XastCdata(value = processed)
+                }
+                else -> child
+            }
+        }
+        node.children.clear()
+        node.children.addAll(newChildren)
+    }
+
+    /**
+     * Prefixes id selectors, class selectors, and url() references in CSS text.
+     * Also minifies the CSS (matching the JS csstree.generate output).
+     */
+    private fun prefixCssText(
+        cssText: String,
+        params: Params,
+        generator: (String) -> String,
+    ): String {
+        val minified = minifyCss(cssText)
+        return prefixCssSelectors(minified, params, generator)
+    }
+
+    /**
+     * Prefixes CSS selectors and url() references within already-minified CSS.
+     * Processes rule-by-rule to distinguish selectors from declaration values.
+     */
+    private fun prefixCssSelectors(
+        css: String,
+        params: Params,
+        generator: (String) -> String,
+    ): String {
+        val result = StringBuilder()
+        var i = 0
+
+        while (i < css.length) {
+            val braceIdx = css.indexOf('{', startIndex = i)
+            if (braceIdx < 0) {
+                result.append(css.substring(startIndex = i))
+                break
+            }
+
+            // Process selector portion
+            val selectorText = css.substring(startIndex = i, endIndex = braceIdx)
+            result.append(prefixSelectorText(selectorText, params, generator))
+            result.append('{')
+
+            // Find closing brace
+            val closeIdx = css.indexOf('}', startIndex = braceIdx + 1)
+            if (closeIdx < 0) {
+                result.append(css.substring(startIndex = braceIdx + 1))
+                break
+            }
+
+            // Process declarations - only prefix url() references
+            val declarations = css.substring(startIndex = braceIdx + 1, endIndex = closeIdx)
+            result.append(prefixUrlReferences(declarations, generator))
+            result.append('}')
+
+            i = closeIdx + 1
+        }
+
+        return result.toString()
+    }
+
+    /**
+     * Prefixes id and class selectors within a CSS selector string.
+     */
+    private fun prefixSelectorText(
+        selectorText: String,
+        params: Params,
+        generator: (String) -> String,
+    ): String {
+        var result = selectorText
+
+        if (params.prefixIds) {
+            result = CSS_ID_SELECTOR_REGEX.replace(result) { match ->
+                "#${generator(match.groupValues[1])}"
+            }
+        }
+
+        if (params.prefixClassNames) {
+            result = CSS_CLASS_SELECTOR_REGEX.replace(result) { match ->
+                ".${generator(match.groupValues[1])}"
+            }
+        }
+
+        return result
+    }
+
+    /**
+     * Replaces url(#id) references in CSS text or attribute values.
+     */
+    private fun prefixUrlReferences(
+        text: String,
+        generator: (String) -> String,
+    ): String = URL_REF_REGEX.replace(text) { match ->
+        val url = match.groupValues[2]
+        if (url.startsWith("#")) {
+            "url(#${generator(url.substring(startIndex = 1))})"
+        } else {
+            match.value
+        }
+    }
+
+    /**
+     * Inserts a prefix before a reference string that starts with #.
+     */
+    private fun prefixReference(prefix: String, reference: String): String? {
+        if (reference.startsWith("#")) {
+            return "#" + prefixId(prefix, reference.substring(startIndex = 1))
+        }
+        return null
+    }
+
+    /**
+     * Basic CSS minification matching csstree.generate output.
+     */
+    private fun minifyCss(css: String): String {
+        var result = css
+        // Remove CSS comments
+        result = result.replace(Regex("/\\*[\\s\\S]*?\\*/"), "")
+        // Collapse whitespace
+        result = result.replace(Regex("\\s+"), " ")
+        // Remove space around { } ; ,
+        result = result.replace(Regex("\\s*\\{\\s*"), "{")
+        result = result.replace(Regex("\\s*}\\s*"), "}")
+        result = result.replace(Regex("\\s*;\\s*"), ";")
+        result = result.replace(Regex("\\s*,\\s*"), ",")
+        result = result.replace(Regex("\\s*:\\s*"), ":")
+        // Collapse multiple semicolons
+        result = result.replace(Regex(";+"), ";")
+        // Remove trailing semicolons before }
+        result = result.replace(Regex(";+}"), "}")
+        return result.trim()
     }
 
     private fun computePrefix(params: Params, info: PluginInfo): String {
