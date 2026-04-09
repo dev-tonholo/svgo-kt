@@ -16,6 +16,18 @@ import svgokt.domain.plugins.VisitorNode
  *
  * @author Benny Schudel / parsed to Kotlin by Rafael Tonholo
  */
+/**
+ * Formats a number the same way JavaScript's Number.toString() would:
+ * integer values render without a decimal point, floats keep their fractional part.
+ */
+private fun formatNumber(value: Double): String {
+    return if (value == value.toLong().toDouble()) {
+        value.toLong().toString()
+    } else {
+        value.toString()
+    }
+}
+
 val RemoveDimensions = plugin<NoPluginParam> {
     name = "removeDimensions"
     description =
@@ -37,9 +49,13 @@ val RemoveDimensions = plugin<NoPluginParam> {
                                 }
 
                                 containsKey(widthKey) && containsKey(heightKey) -> {
-                                    val width = get(widthKey)?.toIntOrNull() ?: return@VisitorNode onEnterSymbol
-                                    val height = get(heightKey)?.toIntOrNull() ?: return@VisitorNode onEnterSymbol
-                                    put(viewBoxKey, "0 0 $width $height")
+                                    val widthStr = get(widthKey) ?: return@VisitorNode onEnterSymbol
+                                    val heightStr = get(heightKey) ?: return@VisitorNode onEnterSymbol
+                                    val width = widthStr.toDoubleOrNull() ?: return@VisitorNode onEnterSymbol
+                                    val height = heightStr.toDoubleOrNull() ?: return@VisitorNode onEnterSymbol
+                                    val widthFormatted = formatNumber(width)
+                                    val heightFormatted = formatNumber(height)
+                                    put(viewBoxKey, "0 0 $widthFormatted $heightFormatted")
                                     remove(widthKey)
                                     remove(heightKey)
                                 }

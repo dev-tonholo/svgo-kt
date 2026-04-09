@@ -77,6 +77,7 @@ object RemoveAttributesBySelector : Plugin<RemoveAttributesBySelector.Params> {
     /**
      * Simplified selector matching supporting:
      * - element name: `rect`
+     * - id selector: `#myId`
      * - attribute value: `[fill='#00ff00']`
      * - combinations: `rect[fill='#00ff00']`
      */
@@ -86,6 +87,13 @@ object RemoveAttributesBySelector : Plugin<RemoveAttributesBySelector.Params> {
         selector: String,
     ): Boolean {
         val trimmed = selector.trim()
+
+        // Handle #id selector
+        if (trimmed.startsWith("#")) {
+            val idValue = trimmed.substring(startIndex = 1)
+            return attributes["id"] == idValue
+        }
+
         val bracketIndex = trimmed.indexOf('[')
         val elemPart = when {
             bracketIndex > 0 -> trimmed.substring(startIndex = 0, endIndex = bracketIndex)
@@ -105,10 +113,33 @@ object RemoveAttributesBySelector : Plugin<RemoveAttributesBySelector.Params> {
     @Suppress("UNCHECKED_CAST")
     private fun resolveParams(pluginParams: PluginParams): Params {
         if (pluginParams is Params) return pluginParams
+        val attributes = when (val raw = pluginParams["attributes"]) {
+            is String -> listOf(raw)
+            is List<*> -> (raw as List<Any>).map { it.toString() }
+            else -> emptyList()
+        }
+        val selectors = when (val raw = pluginParams["selectors"]) {
+            is List<*> -> (raw as List<Any>).mapNotNull { item ->
+                when (item) {
+                    is SelectorDef -> item
+                    is Map<*, *> -> {
+                        val sel = item["selector"] as? String ?: return@mapNotNull null
+                        val attrs = when (val a = item["attributes"]) {
+                            is String -> listOf(a)
+                            is List<*> -> (a as List<Any>).map { it.toString() }
+                            else -> emptyList()
+                        }
+                        SelectorDef(selector = sel, attributes = attrs)
+                    }
+                    else -> null
+                }
+            }
+            else -> emptyList()
+        }
         return Params(
             selector = pluginParams["selector"] as? String,
-            attributes = (pluginParams["attributes"] as? List<String>).orEmpty(),
-            selectors = (pluginParams["selectors"] as? List<SelectorDef>).orEmpty(),
+            attributes = attributes,
+            selectors = selectors,
         )
     }
 }

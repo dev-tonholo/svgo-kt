@@ -24,10 +24,20 @@ data class ConvertShapeToPathParams(
     val convertArcs: Boolean = false,
     val floatPrecision: Int? = null,
 ) : PluginParams,
-    Map<String, Any> by mapOf(
-        "convertArcs" to convertArcs,
-        "floatPrecision" to (floatPrecision ?: 0),
+    Map<String, Any> by convertShapeToPathParamsMap(
+        convertArcs = convertArcs,
+        floatPrecision = floatPrecision,
     )
+
+private fun convertShapeToPathParamsMap(
+    convertArcs: Boolean,
+    floatPrecision: Int?,
+): Map<String, Any> = buildMap {
+    put("convertArcs", convertArcs)
+    if (floatPrecision != null) {
+        put("floatPrecision", floatPrecision)
+    }
+}
 
 /**
  * Converts basic SVG shapes (rect, line, polyline, polygon, circle, ellipse)
@@ -40,8 +50,9 @@ object ConvertShapeToPath : Plugin<ConvertShapeToPathParams> {
     override val description: String = "converts basic shapes to more compact path form"
     override val params: ConvertShapeToPathParams = ConvertShapeToPathParams()
     override val fn: PluginFn = { _, params, _ ->
-        val convertArcs = (params as? ConvertShapeToPathParams)?.convertArcs ?: false
-        val precision = (params as? ConvertShapeToPathParams)?.floatPrecision
+        val resolved = resolveParams(params)
+        val convertArcs = resolved.convertArcs
+        val precision = resolved.floatPrecision
 
         Visitor(
             element = VisitorNode(
@@ -257,6 +268,22 @@ object ConvertShapeToPath : Plugin<ConvertShapeToPathParams> {
             name = "path",
             attributes = newAttrs,
             children = node.children,
+        )
+    }
+
+    private fun resolveParams(params: PluginParams): ConvertShapeToPathParams {
+        if (params is ConvertShapeToPathParams) return params
+        val convertArcs = when (val raw = params["convertArcs"]) {
+            is Boolean -> raw
+            else -> false
+        }
+        val floatPrecision = when (val raw = params["floatPrecision"]) {
+            is Number -> raw.toInt()
+            else -> null
+        }
+        return ConvertShapeToPathParams(
+            convertArcs = convertArcs,
+            floatPrecision = floatPrecision,
         )
     }
 

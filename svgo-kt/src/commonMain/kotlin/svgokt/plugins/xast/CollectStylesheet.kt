@@ -24,7 +24,7 @@ fun collectStylesheet(root: XastRoot): Stylesheet {
                 onEnter = { node, parentNode ->
                     parentNode?.let { parent -> parents += node to parent }
 
-                    if (node.name == "style") {
+                    if (node.name != "style") {
                         return@VisitorNode VisitState.Continue
                     }
 

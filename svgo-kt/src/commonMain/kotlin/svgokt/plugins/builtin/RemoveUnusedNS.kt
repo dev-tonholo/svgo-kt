@@ -22,8 +22,11 @@ val RemoveUnusedNS = plugin<NoPluginParam> {
 
         Visitor(
             element = VisitorNode(
-                onEnter = { node, _ ->
-                    if (!svgRootVisited && node.name == "svg") {
+                onEnter = { node, parentNode ->
+                    // Collect xmlns: declarations from the SVG root element
+                    if (node.name == "svg" && !svgRootVisited &&
+                        (parentNode == null || parentNode is svgokt.domain.XastRoot)
+                    ) {
                         svgRootVisited = true
                         for (key in node.attributes.keys) {
                             if (key.startsWith("xmlns:")) {
@@ -31,13 +34,16 @@ val RemoveUnusedNS = plugin<NoPluginParam> {
                                 unusedNamespaces.add(prefix)
                             }
                         }
-                    } else {
+                    }
+
+                    // Check namespace usage in element names and attribute names
+                    if (unusedNamespaces.isNotEmpty()) {
                         if (node.name.contains(':')) {
                             val prefix = node.name.substringBefore(':')
                             unusedNamespaces.remove(prefix)
                         }
                         for (attrKey in node.attributes.keys) {
-                            if (attrKey.contains(':') && !attrKey.startsWith("xmlns:")) {
+                            if (attrKey.contains(':')) {
                                 val prefix = attrKey.substringBefore(':')
                                 unusedNamespaces.remove(prefix)
                             }
@@ -46,8 +52,10 @@ val RemoveUnusedNS = plugin<NoPluginParam> {
 
                     VisitState.Continue
                 },
-                onExit = { node, _ ->
-                    if (node.name == "svg") {
+                onExit = { node, parentNode ->
+                    if (node.name == "svg" &&
+                        (parentNode == null || parentNode is svgokt.domain.XastRoot)
+                    ) {
                         for (prefix in unusedNamespaces) {
                             node.attributes.remove("xmlns:$prefix")
                         }

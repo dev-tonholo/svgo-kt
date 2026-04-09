@@ -287,6 +287,7 @@ object Collections {
         "text-anchor",
         "text-decoration",
         "text-rendering",
+        "transform",
         "visibility",
         "word-spacing",
         "writing-mode",
