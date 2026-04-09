@@ -13,7 +13,7 @@ import svgokt.domain.plugins.VisitState
 import svgokt.domain.plugins.Visitor
 import svgokt.domain.plugins.VisitorNode
 
-private const val SPECIFICITY_COMPONENTS = 4
+private const val SPECIFICITY_COMPONENTS = 3
 
 fun collectStylesheet(root: XastRoot): Stylesheet {
     val rules = mutableListOf<StylesheetRule>()
