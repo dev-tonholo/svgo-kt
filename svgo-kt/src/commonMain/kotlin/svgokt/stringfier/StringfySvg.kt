@@ -249,14 +249,9 @@ private fun stringifyAttributes(
     config: StringifyOptions,
 ): String = buildString {
     for ((name, value) in node.attributes) {
-        // Remove attributes without values support in v3
-        if (value.isNotEmpty()) {
-            val encodedValue = value.replace(requireNotNull(config.regValEntities)) {
-                requireNotNull(config.encodeEntity)(it.value.single())
-            }
-            append(" $name${config.attrStart}$encodedValue${config.attrEnd}")
-        } else {
-            append(" $name")
+        val encodedValue = value.replace(requireNotNull(config.regValEntities)) {
+            requireNotNull(config.encodeEntity)(it.value.single())
         }
+        append(" $name${config.attrStart}$encodedValue${config.attrEnd}")
     }
 }
