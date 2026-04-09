@@ -68,7 +68,7 @@ class RemoveEmptyContainersTest {
     }
 
     @Test
-    fun `given empty g with id - when plugin runs - then g is preserved`() = runTest {
+    fun `given empty g with id - when plugin runs - then g is removed`() = runTest {
         // Arrange
         val svg = """<svg xmlns="http://www.w3.org/2000/svg"><g id="myGroup"/></svg>"""
 
@@ -76,9 +76,9 @@ class RemoveEmptyContainersTest {
         val result = runPlugin(svg)
 
         // Assert
-        assertTrue(
+        assertFalse(
             actual = result.contains("<g"),
-            message = "Empty g with id attribute should be preserved (may be referenced), but not found in: $result",
+            message = "Empty g with id (no use references) should be removed, but found in: $result",
         )
     }
 }

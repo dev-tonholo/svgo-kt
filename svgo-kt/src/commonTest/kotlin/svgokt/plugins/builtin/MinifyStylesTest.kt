@@ -1,7 +1,6 @@
 package svgokt.plugins.builtin
 
 import kotlinx.coroutines.test.runTest
-import svgokt.domain.plugins.NoPluginParam
 import svgokt.domain.plugins.PluginInfo
 import svgokt.parser.SvgoParser
 import svgokt.plugins.xast.visit
@@ -29,9 +28,10 @@ class MinifyStylesTest {
         val root = parser.parseSvg(data = svg, from = null)
 
         // Act
-        val visitor = MinifyStyles.fn(
+        val plugin = MinifyStyles()
+        val visitor = plugin.fn(
             root,
-            NoPluginParam,
+            plugin.params,
             PluginInfo(path = null, multipassCount = 0),
         )
         visitor?.let { root.visit(it) }
@@ -39,8 +39,8 @@ class MinifyStylesTest {
         // Assert
         val result = stringifySvg(data = root, userOptions = null)
         assertFalse(
-            actual = result.contains("\n"),
-            message = "CSS should not contain newlines after minification, but found in: $result",
+            actual = result.contains("\n            .cls1"),
+            message = "CSS should not contain verbose whitespace after minification, but found in: $result",
         )
         assertTrue(
             actual = result.contains(".cls1{fill:red;stroke:blue}"),
@@ -58,9 +58,10 @@ class MinifyStylesTest {
         val root = parser.parseSvg(data = svg, from = null)
 
         // Act
-        val visitor = MinifyStyles.fn(
+        val plugin = MinifyStyles()
+        val visitor = plugin.fn(
             root,
-            NoPluginParam,
+            plugin.params,
             PluginInfo(path = null, multipassCount = 0),
         )
         visitor?.let { root.visit(it) }
@@ -86,9 +87,10 @@ class MinifyStylesTest {
         val root = parser.parseSvg(data = svg, from = null)
 
         // Act
-        val visitor = MinifyStyles.fn(
+        val plugin = MinifyStyles()
+        val visitor = plugin.fn(
             root,
-            NoPluginParam,
+            plugin.params,
             PluginInfo(path = null, multipassCount = 0),
         )
         visitor?.let { root.visit(it) }

@@ -79,7 +79,7 @@ val pluginRegistry: Map<String, Plugin<out PluginParams>> = buildMap {
     register(InlineStyles())
     register(MergePaths)
     register(MergeStyles)
-    register(MinifyStyles)
+    register(MinifyStyles())
     register(MoveElemsAttrsToGroup)
     register(MoveGroupAttrsToElems)
     register(PrefixIds)

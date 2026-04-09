@@ -69,7 +69,7 @@ class RemoveHiddenElemsTest {
     }
 
     @Test
-    fun `given defs child with display none - when plugin runs - then element preserved`() = runTest {
+    fun `given unreferenced defs child - when plugin runs - then element removed`() = runTest {
         // Arrange
         val svg = """<svg xmlns="http://www.w3.org/2000/svg"><defs><linearGradient display="none" id="g1"/></defs></svg>"""
         val root = parser.parseSvg(data = svg, from = null)
@@ -84,10 +84,9 @@ class RemoveHiddenElemsTest {
 
         // Assert
         val result = stringifySvg(data = root, userOptions = null)
-        assertContains(
-            charSequence = result,
-            other = "linearGradient",
-            message = "Elements inside defs should be preserved even with display=none, but got: $result",
+        assertFalse(
+            actual = result.contains("linearGradient"),
+            message = "Unreferenced non-rendering elements in defs should be removed, but got: $result",
         )
     }
 

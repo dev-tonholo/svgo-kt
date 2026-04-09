@@ -54,7 +54,7 @@ private val plugins: List<Plugin<*>> = listOf(
     CleanupAttrs, // 7
     MergeStyles, // 8
     InlineStyles(), // 9
-    MinifyStyles, // 10
+    MinifyStyles(), // 10
     CleanupIds(), // 11
     // removeUselessDefs,            // 12 - not yet implemented
     CleanupNumericValues, // 13

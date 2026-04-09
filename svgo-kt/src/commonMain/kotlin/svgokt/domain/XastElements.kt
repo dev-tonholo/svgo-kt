@@ -42,7 +42,7 @@ data class XastDoctype(
 data class XastInstruction(
     // override val parentNode: XastParent,
     val name: String,
-    val value: String,
+    var value: String,
     override val type: XastElementType = XastElementType.INSTRUCTION,
 ) : XastChild
 

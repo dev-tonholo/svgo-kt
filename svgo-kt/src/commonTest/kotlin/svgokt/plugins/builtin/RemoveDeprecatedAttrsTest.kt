@@ -1,8 +1,8 @@
 package svgokt.plugins.builtin
 
 import kotlinx.coroutines.test.runTest
-import svgokt.domain.plugins.NoPluginParam
 import svgokt.domain.plugins.PluginInfo
+import svgokt.domain.plugins.PluginParams
 import svgokt.parser.SvgoParser
 import svgokt.plugins.xast.visit
 import svgokt.stringfier.stringifySvg
@@ -14,129 +14,129 @@ class RemoveDeprecatedAttrsTest {
 
     private val pluginInfo = PluginInfo(path = null, multipassCount = 0)
 
+    private fun params(vararg pairs: Pair<String, Any>): PluginParams {
+        val map = pairs.toMap()
+        return object : PluginParams, Map<String, Any> by map {}
+    }
+
+    private suspend fun runPlugin(
+        svg: String,
+        pluginParams: PluginParams = RemoveDeprecatedAttrs.params
+            ?: error("Expected non-null default params"),
+    ): String {
+        val parser = SvgoParser()
+        val root = parser.parseSvg(data = svg, from = null)
+        val visitor = RemoveDeprecatedAttrs.fn?.invoke(root, pluginParams, pluginInfo)
+        visitor?.let { root.visit(it) }
+        return stringifySvg(data = root, userOptions = null)
+    }
+
+    @Test
+    fun `given svg with version attr - when plugin runs - then version is removed`() = runTest {
+        // Arrange - version is a safe deprecated attr on svg
+        val svg = """<svg version="1.1" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect/></svg>"""
+
+        // Act
+        val result = runPlugin(svg)
+
+        // Assert
+        assertFalse(
+            actual = result.contains("version"),
+            message = "version should be removed as safe deprecated attr. Got: $result",
+        )
+    }
+
     @Test
     fun `given element with xml lang and lang - when plugin runs - then xml lang is removed`() = runTest {
         // Arrange
-        val parser = SvgoParser()
         val svg = """<svg xmlns="http://www.w3.org/2000/svg" xml:lang="en" lang="en"><rect/></svg>"""
-        val root = parser.parseSvg(data = svg, from = null)
 
         // Act
-        val visitor = RemoveDeprecatedAttrs.fn(root, NoPluginParam, pluginInfo)
-        visitor?.let { root.visit(it) }
+        val result = runPlugin(svg)
 
         // Assert
-        val result = stringifySvg(data = root, userOptions = null)
         assertFalse(
             actual = result.contains("xml:lang"),
-            message = "xml:lang should be removed when lang is also present, but found it in: $result",
+            message = "xml:lang should be removed when lang is also present. Got: $result",
         )
         assertTrue(
             actual = result.contains("lang=\"en\""),
-            message = "lang attribute should be preserved in: $result",
+            message = "lang attribute should be preserved. Got: $result",
         )
     }
 
     @Test
     fun `given element with only xml lang - when plugin runs - then xml lang is preserved`() = runTest {
-        // Arrange
-        val parser = SvgoParser()
+        // Arrange - xml:lang is unsafe deprecated, not removed by default
         val svg = """<svg xmlns="http://www.w3.org/2000/svg" xml:lang="en"><rect/></svg>"""
-        val root = parser.parseSvg(data = svg, from = null)
 
         // Act
-        val visitor = RemoveDeprecatedAttrs.fn(root, NoPluginParam, pluginInfo)
-        visitor?.let { root.visit(it) }
+        val result = runPlugin(svg)
 
         // Assert
-        val result = stringifySvg(data = root, userOptions = null)
         assertTrue(
             actual = result.contains("xml:lang"),
-            message = "xml:lang should be preserved when lang is not present, but was removed from: $result",
+            message = "xml:lang should be preserved when lang is not present and removeUnsafe is false. Got: $result",
         )
     }
 
     @Test
-    fun `given element with xlink type - when plugin runs - then xlink type is removed`() = runTest {
+    fun `given element with only xml lang - when removeUnsafe true - then xml lang is removed`() = runTest {
         // Arrange
-        val parser = SvgoParser()
-        val svg = """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:type="simple" href="#id"/></svg>"""
-        val root = parser.parseSvg(data = svg, from = null)
+        val svg = """<svg xmlns="http://www.w3.org/2000/svg" xml:lang="en"><rect/></svg>"""
 
         // Act
-        val visitor = RemoveDeprecatedAttrs.fn(root, NoPluginParam, pluginInfo)
-        visitor?.let { root.visit(it) }
+        val result = runPlugin(svg, params("removeUnsafe" to true))
 
         // Assert
-        val result = stringifySvg(data = root, userOptions = null)
         assertFalse(
-            actual = result.contains("xlink:type"),
-            message = "xlink:type should be removed, but found it in: $result",
+            actual = result.contains("xml:lang"),
+            message = "xml:lang should be removed with removeUnsafe=true. Got: $result",
         )
     }
 
     @Test
-    fun `given element with xlink role - when plugin runs - then xlink role is removed`() = runTest {
-        // Arrange
-        val parser = SvgoParser()
-        val svg = """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:role="http://example.com/role" href="#id"/></svg>"""
-        val root = parser.parseSvg(data = svg, from = null)
+    fun `given view with viewTarget - when plugin runs - then viewTarget is preserved`() = runTest {
+        // Arrange - viewTarget is unsafe deprecated on view element
+        val svg = """<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><view id="one" viewBox="0 0 100 100" viewTarget=""/></svg>"""
 
         // Act
-        val visitor = RemoveDeprecatedAttrs.fn(root, NoPluginParam, pluginInfo)
-        visitor?.let { root.visit(it) }
+        val result = runPlugin(svg)
 
         // Assert
-        val result = stringifySvg(data = root, userOptions = null)
-        assertFalse(
-            actual = result.contains("xlink:role"),
-            message = "xlink:role should be removed, but found it in: $result",
+        assertTrue(
+            actual = result.contains("viewTarget"),
+            message = "viewTarget should be preserved without removeUnsafe. Got: $result",
         )
     }
 
     @Test
-    fun `given element with xml space - when plugin runs - then xml space is removed`() = runTest {
+    fun `given view with viewTarget - when removeUnsafe true - then viewTarget is removed`() = runTest {
         // Arrange
-        val parser = SvgoParser()
-        val svg = """<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve"><rect/></svg>"""
-        val root = parser.parseSvg(data = svg, from = null)
+        val svg = """<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><view id="one" viewBox="0 0 100 100" viewTarget=""/></svg>"""
 
         // Act
-        val visitor = RemoveDeprecatedAttrs.fn(root, NoPluginParam, pluginInfo)
-        visitor?.let { root.visit(it) }
+        val result = runPlugin(svg, params("removeUnsafe" to true))
 
         // Assert
-        val result = stringifySvg(data = root, userOptions = null)
         assertFalse(
-            actual = result.contains("xml:space"),
-            message = "xml:space should be removed as it is deprecated in SVG2, but found it in: $result",
+            actual = result.contains("viewTarget"),
+            message = "viewTarget should be removed with removeUnsafe=true. Got: $result",
         )
     }
 
     @Test
-    fun `given element with xlink arcrole and xlink show and xlink actuate - when plugin runs - then all are removed`() = runTest {
-        // Arrange
-        val parser = SvgoParser()
-        val svg = """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:arcrole="http://example.com/arc" xlink:show="new" xlink:actuate="onRequest" href="#id"/></svg>"""
-        val root = parser.parseSvg(data = svg, from = null)
+    fun `given svg with enable-background - when removeUnsafe true - then enable-background is removed`() = runTest {
+        // Arrange - enable-background is unsafe deprecated in presentation group
+        val svg = """<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" enable-background="new 0 0 100 100"><rect/></svg>"""
 
         // Act
-        val visitor = RemoveDeprecatedAttrs.fn(root, NoPluginParam, pluginInfo)
-        visitor?.let { root.visit(it) }
+        val result = runPlugin(svg, params("removeUnsafe" to true))
 
         // Assert
-        val result = stringifySvg(data = root, userOptions = null)
         assertFalse(
-            actual = result.contains("xlink:arcrole"),
-            message = "xlink:arcrole should be removed, but found it in: $result",
-        )
-        assertFalse(
-            actual = result.contains("xlink:show"),
-            message = "xlink:show should be removed, but found it in: $result",
-        )
-        assertFalse(
-            actual = result.contains("xlink:actuate"),
-            message = "xlink:actuate should be removed, but found it in: $result",
+            actual = result.contains("enable-background"),
+            message = "enable-background should be removed with removeUnsafe. Got: $result",
         )
     }
 }
