@@ -1,0 +1,40 @@
+{
+    "version": "1.0.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Jest: current file",
+            //"env": { "NODE_ENV": "test" },
+            "cwd": "${workspaceRoot}/svgo",
+            "program": "${workspaceFolder}/svgo/node_modules/.bin/jest",
+            "runtimeArgs": [
+                "--experimental-vm-modules",
+            ],
+            "args": [
+                "${fileBasenameNoExtension}",
+            ],
+            "console": "integratedTerminal",
+            "disableOptimisticBPs": true,
+            "windows": {
+                "program": "${workspaceFolder}/svgo/node_modules/jest/bin/jest"
+            }
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Jest Tests",
+            "cwd": "${workspaceRoot}/svgo",
+            "program": "${workspaceRoot}/svgo/node_modules/jest/bin/jest.js",
+            "args": [
+                "-i"
+            ],
+            "preLaunchTask": "build",
+            "internalConsoleOptions": "openOnSessionStart",
+            "outFiles": [
+                "${workspaceRoot}/svgo/dist/**/*"
+            ],
+            "envFile": "${workspaceRoot}/svgo/.env"
+        }
+    ]
+}
