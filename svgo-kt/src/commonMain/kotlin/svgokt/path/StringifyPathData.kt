@@ -1,14 +1,43 @@
 package svgokt.path
 
+import kotlin.math.floor
 import kotlin.math.pow
-import kotlin.math.round
+
+/**
+ * Round matching JS Math.round behavior (half-up rounding).
+ */
+private fun jsRound(value: Double): Double = floor(value + 0.5)
 
 private fun toFixed(num: Double, precision: Int): Double {
     val pow = 10.0.pow(precision)
-    return round(num * pow) / pow
+    return jsRound(num * pow) / pow
 }
 
 private fun isInteger(value: Double): Boolean = value % 1.0 == 0.0
+
+/**
+ * Format a Double to match JS Number.toString() behavior.
+ * - Integers print without ".0" (e.g. 5 not 5.0)
+ * - Scientific notation uses lowercase 'e' without '.0' (e.g. 1e-7 not 1.0E-7)
+ */
+private fun doubleToJsString(value: Double): String {
+    if (isInteger(value) && !value.toString().contains('E', ignoreCase = true)) {
+        return value.toLong().toString()
+    }
+    val raw = value.toString()
+    // Convert Kotlin's "1.0E-7" format to JS's "1e-7" format
+    val eIdx = raw.indexOf('E', ignoreCase = true)
+    if (eIdx >= 0) {
+        var mantissa = raw.substring(startIndex = 0, endIndex = eIdx)
+        val exponent = raw.substring(startIndex = eIdx + 1)
+        // Remove trailing ".0" from mantissa in scientific notation
+        if (mantissa.endsWith(".0")) {
+            mantissa = mantissa.dropLast(n = 2)
+        }
+        return mantissa + "e" + exponent
+    }
+    return raw
+}
 
 /**
  * Converts a [Double] to string matching JS Number.toString() behavior,
@@ -17,12 +46,7 @@ private fun isInteger(value: Double): Boolean = value % 1.0 == 0.0
  * In JS, integer-valued doubles print without the ".0" suffix (e.g. 5 not 5.0).
  */
 private fun removeLeadingZero(value: Double): String {
-    // Match JS Number.toString(): integers print without ".0"
-    val strValue = if (isInteger(value) && !value.toString().contains('E', ignoreCase = true)) {
-        value.toLong().toString()
-    } else {
-        value.toString()
-    }
+    val strValue = doubleToJsString(value)
 
     return when {
         value > 0.0 && value < 1.0 && strValue.startsWith('0') ->

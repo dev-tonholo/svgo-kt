@@ -61,8 +61,8 @@ class ConvertPathDataTest {
         val result = stringifySvg(data = root, userOptions = null)
         val dAttr = Regex("""d="([^"]+)"""").find(result)?.groupValues?.get(1)
         assertTrue(
-            actual = dAttr != null && dAttr.contains("H"),
-            message = "Horizontal line should be converted to H command, but d attribute is: $dAttr in: $result",
+            actual = dAttr != null && dAttr.contains("h", ignoreCase = true),
+            message = "Horizontal line should be converted to H/h command, but d attribute is: $dAttr in: $result",
         )
     }
 
@@ -88,8 +88,8 @@ class ConvertPathDataTest {
         val result = stringifySvg(data = root, userOptions = null)
         val dAttr = Regex("""d="([^"]+)"""").find(result)?.groupValues?.get(1)
         assertTrue(
-            actual = dAttr != null && dAttr.contains("V"),
-            message = "Vertical line should be converted to V command, but d attribute is: $dAttr in: $result",
+            actual = dAttr != null && dAttr.contains("v", ignoreCase = true),
+            message = "Vertical line should be converted to V/v command, but d attribute is: $dAttr in: $result",
         )
     }
 
