@@ -11,6 +11,7 @@ import svgokt.path.PathDataItem
 import svgokt.path.js2path
 import svgokt.path.path2js
 import svgokt.path.stringifyPathData
+import svgokt.plugins.xast.visit
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.pow
@@ -109,8 +110,21 @@ class ConvertPathData(
      *
      * @author Kir Belevich / parsed to kotlin by Rafael Tonholo
      */
-    override val fn: PluginFn = { _, pluginParams, _ ->
+    override val fn: PluginFn = { root, pluginParams, _ ->
         val resolvedParams = resolveParams(pluginParams = pluginParams, defaults = params)
+
+        if (resolvedParams.applyTransforms) {
+            val visitor = applyTransforms(
+                root = root,
+                params = ApplyTransformsParams(
+                    transformPrecision = resolvedParams.transformPrecision,
+                    applyTransformsStroked = resolvedParams.applyTransformsStroked,
+                ),
+            )
+            if (visitor != null) {
+                root.visit(visitor = visitor)
+            }
+        }
 
         Visitor(
             element = VisitorNode(
