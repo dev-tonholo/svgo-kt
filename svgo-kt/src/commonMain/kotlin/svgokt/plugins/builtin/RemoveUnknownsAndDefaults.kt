@@ -51,6 +51,13 @@ object RemoveUnknownsAndDefaults : Plugin<PluginParams> {
 
         val stylesheet = collectStylesheet(root)
 
+        // Track resolved (inherited) presentation attributes per element.
+        // This approximates the JS computeStyle behavior for the common case
+        // of inheritable presentation attributes set on ancestor elements.
+        // Uses IdentityHashMap because XastElement is a data class and
+        // different elements with identical structure must be tracked separately.
+        val resolvedStyles = java.util.IdentityHashMap<XastParent, Map<String, String>>()
+
         Visitor(
             instruction = if (defaultMarkupDeclarations) {
                 VisitorNode(
@@ -84,16 +91,23 @@ object RemoveUnknownsAndDefaults : Plugin<PluginParams> {
                     val allowedAttributes = SvgElements.allowedAttributesPerElement[node.name]
                     val attributesDefaults = SvgElements.attributesDefaultsPerElement[node.name]
 
-                    // Compute a simplified parent style map: for presentation
-                    // attributes set directly on the parent element, treat them
-                    // as static inherited values. This approximates the JS
-                    // computeStyle behavior for the most common case.
+                    // Resolve the effective computed style for the parent element.
+                    // The parent has already been visited and its attrs may have been
+                    // modified. We merge the parent's ancestor-inherited styles with
+                    // the parent's own CURRENT (post-modification) presentation attrs.
                     val parentPresentationAttrs: Map<String, String>? =
                         if (parentNode is XastElement) {
-                            parentNode.attributes.filterKeys { key ->
-                                Collections.presentationAttrs.contains(key)
+                            val inherited = resolvedStyles[parentNode].orEmpty().toMutableMap()
+                            for ((key, value) in parentNode.attributes) {
+                                if (Collections.presentationAttrs.contains(key)) {
+                                    inherited[key] = value
+                                }
                             }
+                            resolvedStyles[node] = inherited
+                            inherited
                         } else {
+                            // Parent is root - no inherited presentation attrs
+                            resolvedStyles[node] = emptyMap()
                             null
                         }
 

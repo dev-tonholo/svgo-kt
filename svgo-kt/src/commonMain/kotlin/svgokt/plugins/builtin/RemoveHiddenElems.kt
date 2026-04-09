@@ -466,7 +466,7 @@ object RemoveHiddenElems : Plugin<RemoveHiddenElems.Params> {
     private fun findReferences(attribute: String, value: String): List<String> {
         val results = mutableListOf<String>()
         URL_REF_REGEX.findAll(value).forEach { match ->
-            results.add(match.groupValues[2])
+            results.add(match.groupValues[1])
         }
         if (attribute == "href" || attribute.endsWith(":href")) {
             if (value.startsWith("#")) {
@@ -476,7 +476,7 @@ object RemoveHiddenElems : Plugin<RemoveHiddenElems.Params> {
         return results
     }
 
-    private val URL_REF_REGEX = """\burl\((["'])?#(.+?)\1\)""".toRegex()
+    private val URL_REF_REGEX = """\burl\(["']?#(.+?)["']?\)""".toRegex()
     private val OPACITY_STYLE_REGEX = """(?:^|;)\s*opacity\s*:\s*([^;]+)""".toRegex()
     private val SCRIPT_EVENT_ATTRS = setOf(
         "onbegin", "onend", "onrepeat", "onload", "onabort", "onerror",
