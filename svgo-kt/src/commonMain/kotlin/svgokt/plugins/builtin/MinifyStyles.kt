@@ -255,6 +255,9 @@ class MinifyStyles(
             // Remove trailing semicolons before }
             result = result.replace(Regex(";+}"), "}")
 
+            // Merge longhand properties into shorthands
+            result = mergeShorthandProperties(result)
+
             return result.trim()
         }
 
@@ -269,7 +272,96 @@ class MinifyStyles(
             result = result.replace(Regex("\\s*,\\s*"), ",")
             result = result.replace(Regex(";+"), ";")
             result = result.trimEnd(';')
+            result = mergeShorthandInDeclarations(result)
             return result.trim()
+        }
+
+        private val SHORTHAND_GROUPS = listOf(
+            "padding" to listOf("padding-top", "padding-right", "padding-bottom", "padding-left"),
+            "margin" to listOf("margin-top", "margin-right", "margin-bottom", "margin-left"),
+        )
+
+        /**
+         * Walks through CSS text, finds declaration blocks, and merges
+         * longhand properties into shorthands within each block.
+         */
+        private fun mergeShorthandProperties(css: String): String {
+            val result = StringBuilder()
+            var i = 0
+            while (i < css.length) {
+                val openBrace = css.indexOf('{', startIndex = i)
+                if (openBrace < 0) {
+                    result.append(css.substring(startIndex = i))
+                    break
+                }
+                var depth = 1
+                var j = openBrace + 1
+                while (j < css.length && depth > 0) {
+                    if (css[j] == '{') depth++
+                    if (css[j] == '}') depth--
+                    j++
+                }
+                val inner = css.substring(startIndex = openBrace + 1, endIndex = j - 1)
+                val merged = if (!inner.contains('{')) {
+                    mergeShorthandInDeclarations(inner)
+                } else {
+                    inner
+                }
+                result.append(css, i, openBrace + 1)
+                result.append(merged)
+                result.append('}')
+                i = j
+            }
+            return result.toString()
+        }
+
+        /**
+         * Within a semicolon-separated declaration list, merges longhand
+         * properties into their shorthand when all sides have the same value.
+         */
+        private fun mergeShorthandInDeclarations(declarations: String): String {
+            val parts = declarations.split(';').filter { it.isNotEmpty() }
+            val declMap = linkedMapOf<String, String>()
+            val originalOrder = mutableListOf<String>()
+            for (part in parts) {
+                val colonIdx = part.indexOf(':')
+                if (colonIdx > 0) {
+                    val prop = part.substring(startIndex = 0, endIndex = colonIdx)
+                    val value = part.substring(startIndex = colonIdx + 1)
+                    declMap[prop] = value
+                    originalOrder.add(prop)
+                }
+            }
+
+            for ((shorthand, longhands) in SHORTHAND_GROUPS) {
+                val values = longhands.map { declMap[it] }
+                if (values.all { it != null } && values.distinct().size == 1) {
+                    val shorthandValue = checkNotNull(values[0])
+                    for (longhand in longhands) {
+                        declMap.remove(longhand)
+                    }
+                    // Rebuild preserving order, inserting shorthand at first longhand position
+                    val result = linkedMapOf<String, String>()
+                    var inserted = false
+                    for (key in originalOrder) {
+                        if (key in longhands) {
+                            if (!inserted) {
+                                result[shorthand] = shorthandValue
+                                inserted = true
+                            }
+                        } else if (declMap.containsKey(key)) {
+                            result[key] = checkNotNull(declMap[key])
+                        }
+                    }
+                    if (!inserted) {
+                        result[shorthand] = shorthandValue
+                    }
+                    declMap.clear()
+                    declMap.putAll(result)
+                }
+            }
+
+            return declMap.entries.joinToString(separator = ";") { "${it.key}:${it.value}" }
         }
 
         /**

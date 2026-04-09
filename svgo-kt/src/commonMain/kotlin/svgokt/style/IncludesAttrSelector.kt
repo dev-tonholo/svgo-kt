@@ -1,33 +1,26 @@
 package svgokt.style
 
-import svgokt.xast.parseSelectorListItems
+/**
+ * Regex matching CSS attribute selectors, e.g. `[version]`, `[version="1.1"]`.
+ * Captures the attribute name in group 1.
+ */
+private val attrSelectorRegex = Regex("""\[([a-zA-Z_][\w-]*)(?:[~|^$*]?=)?""")
 
 /**
  * Checks whether a CSS selector string references an attribute with the given [name].
  *
- * This is a simplified version of the JS svgo `includesAttrSelector` that checks
- * whether any parsed sub-selector contains an attribute selector matching [name].
+ * Uses regex matching instead of a full CSS selector parser to avoid
+ * dependency on kss parser internals that may change.
  *
  * @param selector The CSS selector string to inspect.
  * @param name The attribute name to look for.
  * @return true if the selector contains an attribute selector referencing [name].
  */
 fun includesAttrSelector(selector: String, name: String): Boolean {
-    val selectorItems = try {
-        parseSelectorListItems(selector)
-    } catch (_: Exception) {
-        return false
-    }
-
-    for (item in selectorItems) {
-        for (sel in item.selectors) {
-            if (sel is dev.tonholo.kss.parser.ast.css.syntax.node.Selector.Attribute &&
-                sel.name == name
-            ) {
-                return true
-            }
+    for (match in attrSelectorRegex.findAll(selector)) {
+        if (match.groupValues[1] == name) {
+            return true
         }
     }
-
     return false
 }

@@ -174,39 +174,16 @@ object MergePaths : Plugin<MergePathsParams> {
 
         private fun hasUnsafeMergeStyles(child: XastElement): Boolean {
             val computed = computeStyle(stylesheet, child)
-
-            // Check for markers, clip-path, mask, mask-image via attributes and inline styles
-            if (hasMarkerOrClipMask(child)) return true
-
-            // Check for URL references in fill, filter, stroke via attributes
+            for (prop in MARKER_AND_CLIP_ATTRS) {
+                if (computed.containsKey(prop)) return true
+            }
             for (attrName in URL_REF_ATTRS) {
-                val attrVal = child.attributes[attrName]
-                if (attrVal != null && Tools.includesUrlReference(attrVal)) {
-                    return true
+                val style = computed[attrName]
+                if (style is ComputedStyles.StaticStyle) {
+                    if (Tools.includesUrlReference(style.value)) return true
                 }
             }
-
-            // Check inline style for URL references
-            val style = child.attributes["style"]
-            if (style != null && Tools.includesUrlReference(style)) {
-                return true
-            }
-
-            // Check computed style (stub returns DynamicStyle, but check anyway)
-            if (computed is ComputedStyles.StaticStyle) {
-                if (Tools.includesUrlReference(computed.value)) return true
-            }
-
             return false
-        }
-
-        private fun hasMarkerOrClipMask(child: XastElement): Boolean {
-            for (attr in MARKER_AND_CLIP_ATTRS) {
-                if (child.attributes.containsKey(attr)) return true
-            }
-            // Check inline style for these properties
-            val style = child.attributes["style"] ?: return false
-            return MARKER_AND_CLIP_STYLE_PATTERNS.any { it in style }
         }
 
         private fun flushAndAdvance(child: XastChild) {
@@ -219,10 +196,6 @@ object MergePaths : Plugin<MergePathsParams> {
     private val MARKER_AND_CLIP_ATTRS = listOf(
         "marker-start", "marker-mid", "marker-end",
         "clip-path", "mask", "mask-image",
-    )
-    private val MARKER_AND_CLIP_STYLE_PATTERNS = listOf(
-        "marker-start", "marker-mid", "marker-end",
-        "clip-path", "mask-image", "mask:",
     )
 
     private fun isEligiblePath(child: XastChild?): Boolean {

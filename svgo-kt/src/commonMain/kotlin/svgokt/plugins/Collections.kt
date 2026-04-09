@@ -52,6 +52,7 @@ private object ElementGroups {
         "symbol",
     )
     val textContent = setOf(
+        "a",
         "altGlyph",
         "altGlyphDef",
         "altGlyphItem",

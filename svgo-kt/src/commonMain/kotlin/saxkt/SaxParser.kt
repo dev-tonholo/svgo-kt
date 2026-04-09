@@ -403,6 +403,7 @@ internal class SaxParser(
                         state = Sax.State.CDATA_ENDING_2
                     } else {
                         updateBuffer { copy(cdata = "$cdata]$currentChar") }
+                        state = Sax.State.CDATA
                     }
                     continue
                 }
@@ -1042,6 +1043,10 @@ private suspend fun openTag(parser: SaxParser, selfClosing: Boolean = false) {
     // process the tag
     parser.sawRoot = true
     parser.tags += tag
+    // Flush any accumulated text before opening a new tag.
+    // Without this, text between close/open tags leaks into the next element
+    // when trim=false (matching JS sax behavior).
+    parser.closeText()
     parser.tryEmit(SaxEvent.OpenTag(tag = tag))
     if (!selfClosing) {
         // special case for <script> in non-strict mode.

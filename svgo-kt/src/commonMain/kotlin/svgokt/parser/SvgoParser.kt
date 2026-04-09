@@ -47,7 +47,9 @@ class SvgoParser(
 ) {
     private val options = options {
         strict = true
-        trim = true
+        // Use trim=false to match the JS svgo SAX parser behavior.
+        // Text trimming for non-text elements is handled in handleText().
+        trim = false
         normalize = false
         lowercase = false
         xmlns = true

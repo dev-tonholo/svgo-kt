@@ -96,24 +96,25 @@ object RemoveDeprecatedAttrs : Plugin<PluginParams> {
     }
 
     /**
-     * Extracts attribute names referenced in CSS attribute selectors within the stylesheet.
+     * Regex matching CSS attribute selectors, e.g. `[version]`, `[version="1.1"]`.
+     * Captures the attribute name in group 1.
+     */
+    private val attrSelectorRegex = Regex("""\[([a-zA-Z_][\w-]*)(?:[~|^$*]?=)?""")
+
+    /**
+     * Extracts attribute names referenced in CSS attribute selectors within
+     * the stylesheet. Uses regex instead of a full CSS selector parser to
+     * avoid dependency on kss parser internals.
      */
     private fun extractAttributesInStylesheet(
         stylesheet: svgokt.domain.css.Stylesheet,
     ): Set<String> {
         val result = mutableSetOf<String>()
         for (rule in stylesheet.rules) {
-            // Use the selector parser to find attribute selectors
-            val selectorItems = try {
-                svgokt.xast.parseSelectorListItems(rule.selector)
-            } catch (_: Exception) {
-                continue
-            }
-            for (item in selectorItems) {
-                for (sel in item.selectors) {
-                    if (sel is dev.tonholo.kss.parser.ast.css.syntax.node.Selector.Attribute) {
-                        result.add(sel.name)
-                    }
+            for (match in attrSelectorRegex.findAll(rule.selector)) {
+                val attrName = match.groupValues[1]
+                if (attrName.isNotEmpty()) {
+                    result.add(attrName)
                 }
             }
         }
