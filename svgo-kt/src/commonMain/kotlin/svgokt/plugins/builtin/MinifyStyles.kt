@@ -240,7 +240,7 @@ class MinifyStyles(
 
             // Remove space around { } ; ,
             result = result.replace(Regex("\\s*\\{\\s*"), "{")
-            result = result.replace(Regex("\\s*}\\s*"), "}")
+            result = result.replace(Regex("\\s*\\}\\s*"), "}")
             result = result.replace(Regex("\\s*;\\s*"), ";")
             result = result.replace(Regex("\\s*,\\s*"), ",")
 
@@ -253,7 +253,7 @@ class MinifyStyles(
             result = result.replace(Regex(";+"), ";")
 
             // Remove trailing semicolons before }
-            result = result.replace(Regex(";+}"), "}")
+            result = result.replace(Regex(";+\\}"), "}")
 
             // Merge longhand properties into shorthands
             result = mergeShorthandProperties(result)

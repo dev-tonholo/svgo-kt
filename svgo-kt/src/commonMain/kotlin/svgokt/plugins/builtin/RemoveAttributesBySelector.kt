@@ -45,7 +45,7 @@ object RemoveAttributesBySelector : Plugin<RemoveAttributesBySelector.Params> {
     override val description: String = "removes attributes of elements that match a selector"
     override val params: Params = Params()
 
-    private val ATTR_SELECTOR_REGEX = Regex("""\[(\w[\w-]*)=['"](.*?)['"]]""")
+    private val ATTR_SELECTOR_REGEX = Regex("""\[(\w[\w-]*)=['"](.*?)['"]\]""")
 
     override val fn: PluginFn = fn@{ _, pluginParams, _ ->
         val resolved = resolveParams(pluginParams)

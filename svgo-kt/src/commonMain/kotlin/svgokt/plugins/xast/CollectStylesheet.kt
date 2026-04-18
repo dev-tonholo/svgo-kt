@@ -125,11 +125,11 @@ private fun calcSpec(sel: String): Specificity {
     var a = 0; var b = 0; var c = 0
     a += Regex("#[a-zA-Z_][a-zA-Z0-9_-]*").findAll(sel).count()
     b += Regex("\\.[a-zA-Z_][a-zA-Z0-9_-]*").findAll(sel).count()
-    b += Regex("\\[[^]]+]").findAll(sel).count()
+    b += Regex("\\[[^\\]]+\\]").findAll(sel).count()
     b += Regex(":(?!:)[a-zA-Z][a-zA-Z0-9-]*").findAll(sel).count()
     c += Regex("::[a-zA-Z][a-zA-Z0-9-]*").findAll(sel).count()
     val s = sel.replace(Regex("#[a-zA-Z_][a-zA-Z0-9_-]*"), "").replace(Regex("\\.[a-zA-Z_][a-zA-Z0-9_-]*"), "")
-        .replace(Regex("\\[[^]]+]"), "").replace(Regex("::?[a-zA-Z][a-zA-Z0-9-]*(?:\\([^)]*\\))?"), "")
+        .replace(Regex("\\[[^\\]]+\\]"), "").replace(Regex("::?[a-zA-Z][a-zA-Z0-9-]*(?:\\([^)]*\\))?"), "")
     c += Regex("(?:^|[\\s>+~])([a-zA-Z][a-zA-Z0-9]*)").findAll(s).count()
     return Specificity(a = a, b = b, c = c)
 }

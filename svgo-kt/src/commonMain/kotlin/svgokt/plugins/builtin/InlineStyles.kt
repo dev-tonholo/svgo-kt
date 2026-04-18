@@ -743,7 +743,7 @@ class InlineStyles(
             b += Regex("\\.[a-zA-Z_][a-zA-Z0-9_-]*").findAll(withoutNot).count()
 
             // Count attribute selectors ([attr...])
-            b += Regex("\\[[^]]+]").findAll(withoutNot).count()
+            b += Regex("\\[[^\\]]+\\]").findAll(withoutNot).count()
 
             // Count pseudo-classes (single :, not ::)
             b += Regex(":(?!:)[a-zA-Z][a-zA-Z0-9-]*").findAll(withoutNot).count()
@@ -756,7 +756,7 @@ class InlineStyles(
             val stripped = withoutNot
                 .replace(Regex("#[a-zA-Z_][a-zA-Z0-9_-]*"), "")
                 .replace(Regex("\\.[a-zA-Z_][a-zA-Z0-9_-]*"), "")
-                .replace(Regex("\\[[^]]+]"), "")
+                .replace(Regex("\\[[^\\]]+\\]"), "")
                 .replace(Regex("::?[a-zA-Z][a-zA-Z0-9-]*(?:\\([^)]*\\))?"), "")
             c += Regex("(?:^|[\\s>+~])([a-zA-Z][a-zA-Z0-9]*)").findAll(stripped).count()
 
@@ -988,7 +988,7 @@ class InlineStyles(
             result = result.replace(Regex("\\s+"), " ")
             // Remove spaces around { }
             result = result.replace(Regex("\\s*\\{\\s*"), "{")
-            result = result.replace(Regex("\\s*}\\s*"), "}")
+            result = result.replace(Regex("\\s*\\}\\s*"), "}")
             // Remove spaces around semicolons
             result = result.replace(Regex("\\s*;\\s*"), ";")
             // Remove spaces around colons (property:value)
@@ -996,7 +996,7 @@ class InlineStyles(
             // Remove spaces around commas
             result = result.replace(Regex("\\s*,\\s*"), ",")
             // Remove trailing semicolons before }
-            result = result.replace(Regex(";+}"), "}")
+            result = result.replace(Regex(";+\\}"), "}")
             // Remove trailing semicolons at the end of the inner block
             // (this handles declaration-only blocks like @font-face, @viewport, @page)
             result = result.trimEnd(';')
