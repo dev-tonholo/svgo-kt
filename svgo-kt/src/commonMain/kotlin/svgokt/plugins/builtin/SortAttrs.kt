@@ -35,15 +35,17 @@ val SortAttrs = plugin<PluginParams> {
         Visitor(
             element = VisitorNode(
                 onEnter = { node, _ ->
-                    val comparator = Comparator<Map.Entry<String, String>> { a, b ->
+                    val comparator = Comparator<Pair<String, String>> { a, b ->
                         compareAttrs(
-                            aName = a.key,
-                            bName = b.key,
+                            aName = a.first,
+                            bName = b.first,
                             order = order,
                             xmlnsOrder = xmlnsOrder,
                         )
                     }
-                    val sorted = node.attributes.entries.sortedWith(comparator)
+                    val sorted = node.attributes
+                        .map { (key, value) -> key to value }
+                        .sortedWith(comparator)
                     node.attributes.clear()
                     sorted.forEach { (k, v) -> node.attributes[k] = v }
 
