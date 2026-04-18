@@ -1,7 +1,7 @@
 [versions]
 kotlin = "2.3.20"
 detekt = "1.23.8"
-kss = "1.0.0"
+kss = "1.0.2"
 xmlutil = "0.91.3"
 kotlin-coroutines = "1.10.2"
 
@@ -9,9 +9,9 @@ kotlin-coroutines = "1.10.2"
 detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kss-bom = { module = "dev.tonholo.kss:kss-bom", version.ref = "kss" }
-kss-core = { module = "dev.tonholo.kss:kss-core", version.ref = "kss" }
-kss-lexer = { module = "dev.tonholo.kss:kss-lexer", version.ref = "kss" }
-kss-parser = { module = "dev.tonholo.kss:kss-parser", version.ref = "kss" }
+kss-core = { module = "dev.tonholo.kss:kss-core" }
+kss-lexer = { module = "dev.tonholo.kss:kss-lexer" }
+kss-parser = { module = "dev.tonholo.kss:kss-parser" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlin-coroutines" }
 kotlinx-coroutines-js = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-js", version.ref = "kotlin-coroutines" }
 kotlinx-coroutines-jvm = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "kotlin-coroutines" }

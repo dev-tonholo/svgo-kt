@@ -21,6 +21,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.kotlinx.coroutines.core)
+            implementation(dependencies.platform(libs.kss.bom))
             implementation(libs.kss.core)
             implementation(libs.kss.lexer)
             implementation(libs.kss.parser)
