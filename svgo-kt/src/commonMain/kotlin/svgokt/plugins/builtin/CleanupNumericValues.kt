@@ -149,8 +149,12 @@ object CleanupNumericValues : Plugin<CleanupNumericValues.Params> {
         return (value * factor).roundToLong() / factor
     }
 
-    private fun formatNumber(value: Double): String =
-        value.toBigDecimal().stripTrailingZeros().toPlainString()
+    private fun formatNumber(value: Double): String {
+        if (value % 1.0 == 0.0 && !value.toString().contains(char = 'E', ignoreCase = true)) {
+            return value.toLong().toString()
+        }
+        return value.toString()
+    }
 
     internal fun removeLeadingZero(value: Double): String {
         val strValue = formatNumber(value)
