@@ -102,6 +102,31 @@ class SvgoParserTest {
         assertEquals(expected = "100", actual = rectElement.attributes["height"])
         assertEquals(expected = "red", actual = rectElement.attributes["fill"])
     }
+
+    @Test
+    fun `given same SvgoParser - when parseSvg is called twice - then both parses succeed independently`() = runTest {
+        // Arrange
+        val parser = SvgoParser()
+        val first = TestFixtures.SIMPLE_SVG
+        val second = """<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>"""
+
+        // Act
+        val firstResult = parser.parseSvg(data = first, from = null)
+        val secondResult = parser.parseSvg(data = second, from = null)
+
+        // Assert
+        val firstSvg = firstResult.children.filterIsInstance<XastElement>()
+            .first { it.name == "svg" }
+        assertNotNull(firstSvg.children.filterIsInstance<XastElement>().firstOrNull { it.name == "rect" })
+
+        val secondSvg = secondResult.children.filterIsInstance<XastElement>()
+            .first { it.name == "svg" }
+        val circle = secondSvg.children.filterIsInstance<XastElement>()
+            .firstOrNull { it.name == "circle" }
+        assertNotNull(circle, "Second parse should produce a circle element")
+        assertEquals(expected = "5", actual = circle.attributes["r"])
+        assertEquals(expected = 1, actual = secondSvg.children.size)
+    }
 }
 
 private fun findElement(root: XastElement, name: String): XastElement? {

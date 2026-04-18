@@ -56,8 +56,8 @@ class SvgoParser(
         position = true
     }
     private var parserScope: CoroutineScope = createParserScope()
-    private val sax = SaxParser(strict = options.strict, options = options)
-    private val root = XastRoot(type = XastElementType.ROOT, children = mutableListOf())
+    private var sax = SaxParser(strict = options.strict, options = options)
+    private var root = XastRoot(type = XastElementType.ROOT, children = mutableListOf())
     private var current: XastParent = root
     private val stack: MutableList<XastParent> = mutableListOf(root)
     private var parsingState: ParsingState = ParsingState.Parsing
@@ -70,11 +70,26 @@ class SvgoParser(
     }
 
     /**
+     * Resets all mutable state so the parser can be reused across multiple
+     * [parseSvg] calls. The underlying [SaxParser] latches a `closed` flag
+     * after each parse, so a fresh instance is created here as well.
+     */
+    private fun resetState() {
+        sax = SaxParser(strict = options.strict, options = options)
+        root = XastRoot(type = XastElementType.ROOT, children = mutableListOf())
+        current = root
+        stack.clear()
+        stack += root
+        parsingState = ParsingState.Parsing
+    }
+
+    /**
      * Convert SVG (XML) string to SVG-as-Object.
      * @param data the SVG content
      * @param from the file path
      */
     suspend fun parseSvg(data: String, from: String?): XastRoot {
+        resetState()
         if (parserScope.isActive.not()) {
             println("W: Attempted to parse without an active coroutine scope. Creating a new one.")
             parserScope = createParserScope()
