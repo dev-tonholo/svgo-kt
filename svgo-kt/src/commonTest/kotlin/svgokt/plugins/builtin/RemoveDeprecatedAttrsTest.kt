@@ -21,12 +21,11 @@ class RemoveDeprecatedAttrsTest {
 
     private suspend fun runPlugin(
         svg: String,
-        pluginParams: PluginParams = RemoveDeprecatedAttrs.params
-            ?: error("Expected non-null default params"),
+        pluginParams: PluginParams = RemoveDeprecatedAttrs.params,
     ): String {
         val parser = SvgoParser()
         val root = parser.parseSvg(data = svg, from = null)
-        val visitor = RemoveDeprecatedAttrs.fn?.invoke(root, pluginParams, pluginInfo)
+        val visitor = RemoveDeprecatedAttrs.fn(root, pluginParams, pluginInfo)
         visitor?.let { root.visit(it) }
         return stringifySvg(data = root, userOptions = null)
     }

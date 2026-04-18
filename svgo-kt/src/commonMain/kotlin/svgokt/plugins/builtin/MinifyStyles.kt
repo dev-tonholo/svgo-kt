@@ -150,7 +150,6 @@ class MinifyStyles(
                         val cssText = when (firstChild) {
                             is XastText -> firstChild.value
                             is XastCdata -> firstChild.value
-                            else -> continue
                         }
 
                         // Skip usage-based removal for styles inside foreignObject
