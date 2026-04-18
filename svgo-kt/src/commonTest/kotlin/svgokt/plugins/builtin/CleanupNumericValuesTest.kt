@@ -7,6 +7,7 @@ import svgokt.plugins.xast.visit
 import svgokt.stringfier.stringifySvg
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 class CleanupNumericValuesTest {
@@ -151,23 +152,29 @@ class CleanupNumericValuesTest {
 
     @Test
     fun `given removeLeadingZero with positive fraction - when called - then zero is removed`() {
-        // Arrange & Act & Assert
+        // Arrange & Act
         val result = CleanupNumericValues.removeLeadingZero(value = 0.5)
-        assert(result == ".5") { "Expected '.5' but got '$result'" }
+
+        // Assert
+        assertEquals(expected = ".5", actual = result)
     }
 
     @Test
     fun `given removeLeadingZero with negative fraction - when called - then zero is removed`() {
-        // Arrange & Act & Assert
+        // Arrange & Act
         val result = CleanupNumericValues.removeLeadingZero(value = -0.5)
-        assert(result == "-.5") { "Expected '-.5' but got '$result'" }
+
+        // Assert
+        assertEquals(expected = "-.5", actual = result)
     }
 
     @Test
     fun `given removeLeadingZero with whole number - when called - then number is unchanged`() {
-        // Arrange & Act & Assert
+        // Arrange & Act
         val result = CleanupNumericValues.removeLeadingZero(value = 5.0)
-        assert(result == "5") { "Expected '5' but got '$result'" }
+
+        // Assert
+        assertEquals(expected = "5", actual = result)
     }
 
     @Test

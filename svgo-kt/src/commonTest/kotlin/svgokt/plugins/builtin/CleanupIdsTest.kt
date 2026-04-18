@@ -37,7 +37,7 @@ class CleanupIdsTest {
     }
 
     @Test
-    fun `given SVG with referenced ID via url() - when cleanupIds runs - then referenced ID is kept`() = runTest {
+    fun `given SVG with referenced ID via url function - when cleanupIds runs - then referenced ID is kept`() = runTest {
         // Arrange
         val svg = """<svg xmlns="http://www.w3.org/2000/svg">""" +
             """<defs><linearGradient id="grad1"><stop offset="0" stop-color="red"/></linearGradient></defs>""" +
