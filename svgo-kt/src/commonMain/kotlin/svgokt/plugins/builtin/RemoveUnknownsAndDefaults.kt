@@ -54,9 +54,9 @@ object RemoveUnknownsAndDefaults : Plugin<PluginParams> {
         // Track resolved (inherited) presentation attributes per element.
         // This approximates the JS computeStyle behavior for the common case
         // of inheritable presentation attributes set on ancestor elements.
-        // Uses IdentityHashMap because XastElement is a data class and
-        // different elements with identical structure must be tracked separately.
-        val resolvedStyles = java.util.IdentityHashMap<XastParent, Map<String, String>>()
+        // Uses reference identity because XastElement is a data class whose
+        // hashCode changes when children or attributes mutate during the walk.
+        val resolvedStyles = IdentityAncestorMap<XastParent, Map<String, String>>()
 
         Visitor(
             instruction = if (defaultMarkupDeclarations) {
@@ -70,6 +70,7 @@ object RemoveUnknownsAndDefaults : Plugin<PluginParams> {
                 null
             },
             element = VisitorNode(
+                onExit = { node, _ -> resolvedStyles.remove(node) },
                 onEnter = onEnter@{ node, parentNode ->
                     // skip namespaced elements
                     if (node.name.contains(":")) {
@@ -156,6 +157,31 @@ object RemoveUnknownsAndDefaults : Plugin<PluginParams> {
                 },
             ),
         )
+    }
+
+    /**
+     * Reference-identity map used in place of java.util.IdentityHashMap so the
+     * plugin compiles on every Kotlin target. Entries are pruned on visitor
+     * exit, so the backing list stays bounded by the current traversal depth.
+     */
+    private class IdentityAncestorMap<K : Any, V : Any> {
+        private val entries = mutableListOf<Pair<K, V>>()
+
+        operator fun get(key: K): V? = entries.firstOrNull { (k, _) -> k === key }?.second
+
+        operator fun set(key: K, value: V) {
+            val index = entries.indexOfFirst { (k, _) -> k === key }
+            if (index >= 0) {
+                entries[index] = key to value
+            } else {
+                entries += key to value
+            }
+        }
+
+        fun remove(key: K) {
+            val index = entries.indexOfFirst { (k, _) -> k === key }
+            if (index >= 0) entries.removeAt(index)
+        }
     }
 
     /**
