@@ -32,6 +32,7 @@ import svgokt.plugins.builtin.RemoveDesc
 import svgokt.plugins.builtin.RemoveDimensions
 import svgokt.plugins.builtin.RemoveDoctype
 import svgokt.plugins.builtin.RemoveEditorsNSData
+import svgokt.plugins.builtin.RemoveElementsByAttr
 import svgokt.plugins.builtin.RemoveEmptyAttrs
 import svgokt.plugins.builtin.RemoveEmptyContainers
 import svgokt.plugins.builtin.RemoveEmptyText
@@ -48,6 +49,7 @@ import svgokt.plugins.builtin.RemoveUnusedNS
 import svgokt.plugins.builtin.RemoveUselessDefs
 import svgokt.plugins.builtin.RemoveUselessStrokeAndFill
 import svgokt.plugins.builtin.RemoveViewBox
+import svgokt.plugins.builtin.RemoveXlink
 import svgokt.plugins.builtin.RemoveXMLNS
 import svgokt.plugins.builtin.RemoveXMLProcInst
 import svgokt.plugins.builtin.ReusePaths
@@ -92,6 +94,7 @@ val builtinPlugins: List<Plugin<out PluginParams>> = listOf(
     RemoveDimensions,
     RemoveDoctype,
     RemoveEditorsNSData,
+    RemoveElementsByAttr,
     RemoveEmptyAttrs,
     RemoveEmptyContainers,
     RemoveEmptyText,
@@ -108,6 +111,7 @@ val builtinPlugins: List<Plugin<out PluginParams>> = listOf(
     RemoveUselessDefs,
     RemoveUselessStrokeAndFill,
     RemoveViewBox,
+    RemoveXlink,
     RemoveXMLNS,
     RemoveXMLProcInst,
     ReusePaths,
