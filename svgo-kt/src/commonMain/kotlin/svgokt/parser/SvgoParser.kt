@@ -3,6 +3,7 @@ package svgokt.parser
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
@@ -96,7 +97,15 @@ class SvgoParser(
         }
         // As JS target doesn't have multiple threads, we need to run both the state collector
         // and the writer procedure by using async.
-        val stateCollector = parserScope.async {
+        //
+        // Start = UNDISPATCHED so the collector subscribes to `sax.events` (a
+        // MutableSharedFlow with replay=0 and no buffer) before the writer
+        // begins emitting. Without this, early `emit` calls complete with no
+        // subscriber and events are silently dropped, surfacing later as a
+        // missing root element or an unbalanced closeTag on an empty stack.
+        // The SharedFlow contract guarantees the subscription is registered
+        // by the time `.collect { ... }` first suspends.
+        val stateCollector = parserScope.async(start = CoroutineStart.UNDISPATCHED) {
             sax.events
                 .collect { event ->
                     when (event) {
