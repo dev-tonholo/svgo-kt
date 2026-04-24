@@ -11,8 +11,10 @@ import svgokt.domain.plugins.VisitorNode
 import svgokt.plugins.DeprecatedAttrs
 import svgokt.plugins.SvgElements
 import svgokt.plugins.attrsGroupsDeprecated
+import dev.tonholo.kss.parser.ast.css.syntax.node.Selector
 import svgokt.plugins.xast.collectStylesheet
 import svgokt.style.includesAttrSelector
+import svgokt.xast.parseSelectors
 
 private const val PARAM_REMOVE_UNSAFE = "removeUnsafe"
 
@@ -96,29 +98,36 @@ object RemoveDeprecatedAttrs : Plugin<PluginParams> {
     }
 
     /**
-     * Regex matching CSS attribute selectors, e.g. `[version]`, `[version="1.1"]`.
-     * Captures the attribute name in group 1.
-     */
-    private val attrSelectorRegex = Regex("""\[([a-zA-Z_][\w-]*)(?:[~|^$*]?=)?""")
-
-    /**
      * Extracts attribute names referenced in CSS attribute selectors within
-     * the stylesheet. Uses regex instead of a full CSS selector parser to
-     * avoid dependency on kss parser internals.
+     * the stylesheet.
      */
     private fun extractAttributesInStylesheet(
         stylesheet: svgokt.domain.css.Stylesheet,
     ): Set<String> {
         val result = mutableSetOf<String>()
         for (rule in stylesheet.rules) {
-            for (match in attrSelectorRegex.findAll(rule.selector)) {
-                val attrName = match.groupValues[1]
-                if (attrName.isNotEmpty()) {
-                    result.add(attrName)
+            for (item in parseSelectors(selector = rule.selector)) {
+                for (selector in item.selectors) {
+                    collectAttrNames(selector = selector, into = result)
                 }
             }
         }
         return result
+    }
+
+    private fun collectAttrNames(selector: Selector, into: MutableSet<String>) {
+        when (selector) {
+            is Selector.Attribute -> into.add(selector.name)
+            is Selector.PseudoClass -> selector.parameters.forEach {
+                collectAttrNames(selector = it, into = into)
+            }
+
+            is Selector.PseudoElement -> selector.parameters.forEach {
+                collectAttrNames(selector = it, into = into)
+            }
+
+            else -> Unit
+        }
     }
 }
 
