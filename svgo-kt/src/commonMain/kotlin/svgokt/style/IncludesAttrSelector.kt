@@ -1,26 +1,31 @@
 package svgokt.style
 
-/**
- * Regex matching CSS attribute selectors, e.g. `[version]`, `[version="1.1"]`.
- * Captures the attribute name in group 1.
- */
-private val attrSelectorRegex = Regex("""\[([a-zA-Z_][\w-]*)(?:[~|^$*]?=)?""")
+import dev.tonholo.kss.parser.ast.css.syntax.node.Selector
+import svgokt.xast.parseSelectors
 
 /**
  * Checks whether a CSS selector string references an attribute with the given [name].
  *
- * Uses regex matching instead of a full CSS selector parser to avoid
- * dependency on kss parser internals that may change.
+ * Parses [selector] with kss and walks every compound selector (including
+ * nested pseudo-class arguments such as `:not([fill])`) looking for an
+ * attribute selector that matches [name].
  *
  * @param selector The CSS selector string to inspect.
  * @param name The attribute name to look for.
  * @return true if the selector contains an attribute selector referencing [name].
  */
 fun includesAttrSelector(selector: String, name: String): Boolean {
-    for (match in attrSelectorRegex.findAll(selector)) {
-        if (match.groupValues[1] == name) {
+    for (item in parseSelectors(selector = selector)) {
+        if (item.selectors.any { containsAttr(selector = it, name = name) }) {
             return true
         }
     }
     return false
+}
+
+private fun containsAttr(selector: Selector, name: String): Boolean = when (selector) {
+    is Selector.Attribute -> selector.name == name
+    is Selector.PseudoClass -> selector.parameters.any { containsAttr(selector = it, name = name) }
+    is Selector.PseudoElement -> selector.parameters.any { containsAttr(selector = it, name = name) }
+    else -> false
 }
