@@ -11,26 +11,10 @@ import svgokt.domain.XastParent
 private val selectorParser = CssSelectorParser()
 
 /**
- * Non-standard combinators (Polymer-era Shadow DOM piercing syntax) that are
- * never valid on plain SVG elements. kss will happily tokenize and parse them,
- * but the resulting selector either will not match anything or drives the
- * selector matcher through very expensive walks for no benefit. Bail out up
- * front so an element with dozens of such rules (e.g. the inlineStyles.15
- * fixture) finishes in reasonable time.
- */
-private val NON_STANDARD_COMBINATOR_MARKERS = listOf("/deep/", ">>>", "::shadow")
-
-/**
  * Parses a CSS selector string into a list of [SelectorListItem].
- * Returns an empty list when the input cannot be parsed or when the selector
- * uses a non-standard combinator that cannot match any SVG element.
  */
-internal fun parseSelectors(selector: String): List<SelectorListItem> {
-    if (NON_STANDARD_COMBINATOR_MARKERS.any { marker -> marker in selector }) {
-        return emptyList()
-    }
-    return selectorParser.parse(selector = selector)
-}
+internal fun parseSelectors(selector: String): List<SelectorListItem> =
+    selectorParser.parse(selector = selector)
 
 /**
  * Checks whether [element] matches a compound [selectorItem], walking
