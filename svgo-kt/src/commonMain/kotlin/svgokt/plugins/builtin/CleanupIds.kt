@@ -1,8 +1,6 @@
 package svgokt.plugins.builtin
 
-import svgokt.domain.XastChild
 import svgokt.domain.XastElement
-import svgokt.domain.XastElementType
 import svgokt.domain.plugins.Plugin
 import svgokt.domain.plugins.PluginFn
 import svgokt.domain.plugins.PluginParams
@@ -100,8 +98,12 @@ class CleanupIds(
             }
         }
 
-        // Iterate over a snapshot of entries to avoid ConcurrentModificationException
-        val entries = node.attributes.entries.toList()
+        // Iterate over a detached snapshot (Pairs, not Map.Entry) so mutating
+        // node.attributes during the loop does not throw
+        // ConcurrentModificationException on Kotlin/Native and Kotlin/JS —
+        // their HashMap implementations invalidate outstanding Map.Entry views
+        // even after `.toList()`.
+        val entries = node.attributes.entries.map { it.key to it.value }
         for ((attrName, attrValue) in entries) {
             if (attrName == "id") {
                 if (nodeById.containsKey(attrValue)) {
@@ -150,8 +152,10 @@ class CleanupIds(
                     currentIdString = getIdString(currentId)
                 } while (
                     isIdPreserved(currentIdString) ||
-                    (referencesById.containsKey(currentIdString) &&
-                        nodeById[currentIdString] == null)
+                    (
+                        referencesById.containsKey(currentIdString) &&
+                            nodeById[currentIdString] == null
+                        )
                 )
 
                 node.attributes["id"] = currentIdString
