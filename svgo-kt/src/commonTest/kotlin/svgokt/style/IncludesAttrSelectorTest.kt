@@ -101,4 +101,76 @@ class IncludesAttrSelectorTest {
         // Assert
         assertFalse(actual = result)
     }
+
+    @Test
+    fun `given equality selector with matching value - when includesAttrSelector with value - then returns true`() {
+        // Arrange
+        val selector = """path[class="foo"]"""
+
+        // Act
+        val result = includesAttrSelector(selector = selector, name = "class", value = "foo")
+
+        // Assert
+        assertTrue(actual = result)
+    }
+
+    @Test
+    fun `given equality selector with different value - when includesAttrSelector with value - then returns false`() {
+        // Arrange
+        val selector = """path[class="bar"]"""
+
+        // Act
+        val result = includesAttrSelector(selector = selector, name = "class", value = "foo")
+
+        // Assert
+        assertFalse(actual = result)
+    }
+
+    @Test
+    fun `given whitespace list selector containing token - when includesAttrSelector with value - then returns true`() {
+        // Arrange
+        val selector = """path[class~="foo bar"]"""
+
+        // Act
+        val result = includesAttrSelector(selector = selector, name = "class", value = "foo")
+
+        // Assert
+        assertTrue(actual = result)
+    }
+
+    @Test
+    fun `given prefix selector matching value - when includesAttrSelector with value - then returns true`() {
+        // Arrange
+        val selector = """path[class^="foo"]"""
+
+        // Act
+        val result = includesAttrSelector(selector = selector, name = "class", value = "foobar")
+
+        // Assert
+        assertTrue(actual = result)
+    }
+
+    @Test
+    fun `given bare attribute with value check - when includesAttrSelector with value - then returns true`() {
+        // Arrange
+        val selector = "path[class]"
+
+        // Act
+        val result = includesAttrSelector(selector = selector, name = "class", value = "foo")
+
+        // Assert
+        assertTrue(actual = result)
+    }
+
+    @Test
+    fun `given equality selector on wrong attr - when includesAttrSelector with value - then returns false`() {
+        // Arrange
+        val selector = """path[id="foo"]"""
+
+        // Act
+        val result = includesAttrSelector(selector = selector, name = "class", value = "foo")
+
+        // Assert
+        assertFalse(actual = result)
+    }
 }
