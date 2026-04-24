@@ -15,6 +15,7 @@ import svgokt.domain.plugins.VisitorNode
 import svgokt.domain.plugins.VisitorRoot
 import svgokt.plugins.Collections
 import svgokt.plugins.xast.detachFromParent
+import svgokt.style.includesAttrSelector
 import svgokt.xast.querySelectorAll
 
 /**
@@ -264,8 +265,8 @@ class InlineStyles(
                 if (Collections.presentationAttrs.contains(decl.property)) {
                     val usedInAttrSelector = allSelectors.any { sel ->
                         includesAttrSelector(
-                            selectorText = sel.originalSelector,
-                            attrName = decl.property,
+                            selector = sel.originalSelector,
+                            name = decl.property,
                         )
                     }
                     if (!usedInAttrSelector) {
@@ -309,10 +310,9 @@ class InlineStyles(
                     // Don't remove if used in an attribute selector
                     val usedInAttrSelector = allSelectors.any { sel ->
                         includesAttrSelector(
-                            selectorText = sel.originalSelector,
-                            attrName = "class",
-                            attrValue = className,
-                            checkValue = true,
+                            selector = sel.originalSelector,
+                            name = "class",
+                            value = className,
                         )
                     }
                     if (usedInAttrSelector) continue
@@ -337,10 +337,9 @@ class InlineStyles(
             if (idName != null && element.attributes["id"] == idName) {
                 val usedInAttrSelector = allSelectors.any { sel ->
                     includesAttrSelector(
-                        selectorText = sel.originalSelector,
-                        attrName = "id",
-                        attrValue = idName,
-                        checkValue = true,
+                        selector = sel.originalSelector,
+                        name = "id",
+                        value = idName,
                     )
                 }
                 // Don't remove if still referenced by a remaining selector
@@ -351,27 +350,6 @@ class InlineStyles(
                     element.attributes.remove("id")
                 }
             }
-        }
-
-        /**
-         * Checks if a CSS selector text contains an attribute selector referencing
-         * the given attribute name (and optionally value).
-         */
-        @Suppress("ReturnCount")
-        private fun includesAttrSelector(
-            selectorText: String,
-            attrName: String,
-            attrValue: String? = null,
-            checkValue: Boolean = false,
-        ): Boolean {
-            if (!selectorText.contains('[')) return false
-
-            val attrPattern = if (checkValue && attrValue != null) {
-                Regex("""\[$attrName[~|^$*]?=["\']?${Regex.escape(attrValue)}""")
-            } else {
-                Regex("""\[$attrName[\]~|^$*=]""")
-            }
-            return attrPattern.containsMatchIn(selectorText)
         }
 
         /**
