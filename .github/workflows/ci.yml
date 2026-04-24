@@ -12,29 +12,43 @@ concurrency:
 
 jobs:
   test:
-    name: Build & Test
-    runs-on: ubuntu-latest
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Ubuntu hosts the JVM, JS (node) and linuxX64 native targets.
+          # Running them all on a single Ubuntu runner is the cheapest way
+          # to cover the bulk of the test surface, including the full
+          # 363-fixture upstream parity suite (jvmTest).
+          - os: ubuntu-latest
+            label: Ubuntu (JVM, JS, linuxX64)
+            tasks: ":svgo-kt:assemble :svgo-kt:jvmTest :svgo-kt:jsNodeTest :svgo-kt:linuxX64Test"
+          # macOS hosts the macosArm64 native target, which is the primary
+          # Apple Silicon configuration for downstream consumers and the
+          # one we develop against locally.
+          - os: macos-latest
+            label: macOS (macosArm64)
+            tasks: ":svgo-kt:macosArm64Test"
+          # Windows hosts the mingwX64 native target so the cross-platform
+          # sanity test runs on every officially supported native host.
+          - os: windows-latest
+            label: Windows (mingwX64)
+            tasks: ":svgo-kt:mingwX64Test"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup
 
-      - name: Build
-        run: ./gradlew :svgo-kt:assemble
-
-      - name: JVM tests (full 363-fixture suite + unit tests)
-        run: ./gradlew :svgo-kt:jvmTest
-
-      - name: JS (node) tests
-        run: ./gradlew :svgo-kt:jsNodeTest
-
-      - name: Linux x64 native tests
-        run: ./gradlew :svgo-kt:linuxX64Test
+      - name: Run tests
+        shell: bash
+        run: ./gradlew ${{ matrix.tasks }}
 
       - name: Upload test reports on failure
         if: failure()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v4.6.2
         with:
-          name: test-reports
+          name: test-reports-${{ matrix.os }}
           path: |
             svgo-kt/build/reports/tests/
             svgo-kt/build/test-results/
