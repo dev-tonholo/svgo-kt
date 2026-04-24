@@ -1,7 +1,6 @@
 package svgokt.integration
 
 import svgokt.domain.plugins.PluginParams
-import java.io.File
 
 /**
  * Represents a single plugin test fixture parsed from an .svg.txt file.
@@ -11,7 +10,10 @@ import java.io.File
  * @property input The input SVG content.
  * @property expected The expected output SVG content.
  * @property paramsJson Optional JSON string with plugin parameters.
- * @property filePath Absolute path to the fixture file.
+ * @property fileName The fixture file name (e.g. "removeDoctype.01.svg.txt").
+ *                   Used as the [svgokt.domain.Config.path] value so plugins that
+ *                   consult the source path receive a stable identifier across
+ *                   platforms (no absolute path on JVM vs no path on JS/native).
  */
 data class PluginFixture(
     val pluginName: String,
@@ -19,7 +21,7 @@ data class PluginFixture(
     val input: String,
     val expected: String,
     val paramsJson: String?,
-    val filePath: String,
+    val fileName: String,
 ) {
     /**
      * Parses [paramsJson] into a [PluginParams] map.
@@ -38,7 +40,13 @@ data class PluginFixture(
 private val filenameRegex = Regex("""^(.*)\.(\d+)\.svg\.txt$""")
 
 /**
- * Reads all plugin test fixtures from the given directory.
+ * Reads all plugin test fixtures from the generated fixture source map.
+ *
+ * Fixtures are embedded at build time by the `generatePluginFixtureSources`
+ * Gradle task, which reads the svgo plugin fixture files and emits them into
+ * [pluginFixtureSources]. Using a generated map (instead of the filesystem)
+ * lets the same test run on JVM, JS, and native targets without needing a
+ * platform file-IO abstraction.
  *
  * Each fixture file follows the format:
  * ```
@@ -53,19 +61,19 @@ private val filenameRegex = Regex("""^(.*)\.(\d+)\.svg\.txt$""")
  *
  * If no `===` separator is present, the content before `@@@` is the input.
  */
-fun readFixtures(fixturesDir: File): List<PluginFixture> {
-    val files = fixturesDir.listFiles() ?: return emptyList()
-    return files
-        .filter { it.name.matches(filenameRegex) }
-        .mapNotNull { file -> parseFixtureFile(file) }
+fun readFixtures(
+    sources: Map<String, String> = pluginFixtureSources,
+): List<PluginFixture> {
+    return sources.entries
+        .mapNotNull { (name, content) -> parseFixture(fileName = name, rawContent = content) }
         .sortedWith(compareBy({ it.pluginName }, { it.index }))
 }
 
-private fun parseFixtureFile(file: File): PluginFixture? {
-    val match = filenameRegex.matchEntire(file.name) ?: return null
+private fun parseFixture(fileName: String, rawContent: String): PluginFixture? {
+    val match = filenameRegex.matchEntire(fileName) ?: return null
     val pluginName = match.groupValues[1]
     val index = match.groupValues[2]
-    val content = file.readText().trim().replace("\r\n", "\n")
+    val content = rawContent.trim().replace("\r\n", "\n")
 
     // Remove description (before ===)
     val items = content.split(Regex("""\s*===\s*"""))
@@ -81,6 +89,6 @@ private fun parseFixtureFile(file: File): PluginFixture? {
         input = parts[0].trim(),
         expected = parts[1].trim(),
         paramsJson = parts.getOrNull(index = 2)?.trim()?.takeIf { it.isNotEmpty() },
-        filePath = file.absolutePath,
+        fileName = fileName,
     )
 }

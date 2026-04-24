@@ -8,7 +8,6 @@ import svgokt.domain.builder.stringifyOptions
 import svgokt.domain.builder.svgo
 import svgokt.domain.plugins.PluginConfig
 import svgokt.domain.plugins.PluginParams
-import java.io.File
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -17,35 +16,23 @@ import kotlin.test.Test
 import kotlin.test.fail
 
 /**
- * Integration test that runs svgo's own plugin test fixtures against the
- * svgo-kt Kotlin implementation.
+ * JVM-only integration test that runs the full svgo plugin fixture set against
+ * the svgo-kt Kotlin implementation.
  *
- * Each `.svg.txt` file in the svgo fixture directory tests a single plugin.
- * This test reads every fixture, runs the matching Kotlin plugin through the
- * full Svgo.optimize() pipeline, and compares the output against the expected
- * result.
+ * Fixtures are read from [pluginFixtureSources] (generated at build time by the
+ * `generatePluginFixtureSources` Gradle task), so there is no runtime filesystem
+ * access. This test still lives under `jvmTest` (and not `commonTest`) because
+ * it relies on JVM-only constructs to isolate each fixture in its own thread
+ * with a hard timeout. The cross-platform smoke coverage for JS and native
+ * targets is provided by [PluginFixtureSanityTest] in `commonTest`.
  *
- * Matches the JS test harness behavior:
+ * Each `.svg.txt` fixture tests a single plugin. Matches the JS test harness:
  * - Each plugin runs individually via optimize() (not preset-default).
  * - Uses `pretty: true` for stringification via js2svg config.
  * - Tests 2-pass idempotence (except addAttributesToSVGElement and convertTransform).
  * - Fixture params (JSON after second @@@) are passed as BuiltinWithParams.
  */
 class PluginFixtureTest {
-
-    private val fixturesDir: File by lazy {
-        // Resolve fixtures relative to the project root.
-        // During Gradle test execution the working directory is the module root (svgo-kt/).
-        val candidates = listOf(
-            File("../svgo/test/plugins"),
-            File("../../svgo/test/plugins"),
-            File("svgo/test/plugins"),
-        )
-        candidates.firstOrNull { it.isDirectory }
-            ?: error(
-                "Cannot find svgo fixture directory. Tried: ${candidates.map { it.absolutePath }}"
-            )
-    }
 
     private val prettyOptions = stringifyOptions {
         pretty = true
@@ -75,9 +62,10 @@ class PluginFixtureTest {
 
     @Test
     fun `given svgo test fixtures - when running all plugins - then results match expected output`() {
-        val fixtures = readFixtures(fixturesDir)
+        val fixtures = readFixtures()
         require(fixtures.isNotEmpty()) {
-            "No fixtures found in ${fixturesDir.absolutePath}"
+            "No fixtures found in generated pluginFixtureSources. " +
+                "Did generatePluginFixtureSources run?"
         }
 
         val results = mutableListOf<FixtureResult>()
@@ -105,9 +93,6 @@ class PluginFixtureTest {
         val total = results.size
         val attempted = total - skipped
 
-        // The test passes as long as there were no unexpected errors in the harness itself.
-        // Individual fixture mismatches are expected during development.
-        // Fail if zero fixtures passed (something is fundamentally broken).
         if (passed == 0 && total > 0) {
             fail(
                 "No fixtures passed out of $total total " +
@@ -123,6 +108,10 @@ class PluginFixtureTest {
                 "Errors: $errors | Skipped: $skipped\n" +
                 "Pass rate: $passRate% (of $attempted attempted)"
         )
+
+        if (failed > 0 || errors > 0) {
+            fail("$failed fixture failures, $errors errors (see report above).")
+        }
     }
 
     /**
@@ -186,7 +175,7 @@ class PluginFixtureTest {
         var lastResultData = fixture.input
         for (pass in 1..multipass) {
             val config = Config(
-                path = fixture.filePath,
+                path = fixture.fileName,
                 plugins = listOf(pluginConfig),
                 js2svg = prettyOptions,
             )
