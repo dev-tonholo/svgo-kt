@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Upstream SVGO bug
+    url: https://github.com/svg/svgo/issues
+    about: |
+      svgo-kt mirrors svgo behavior on purpose. If the same input produces the
+      same output in upstream svgo, the bug almost certainly belongs there.
+      Please open an issue against svg/svgo first; we will track and import the
+      fix once it lands.

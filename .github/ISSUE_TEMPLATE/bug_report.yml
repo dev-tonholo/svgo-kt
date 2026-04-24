@@ -1,0 +1,102 @@
+name: Bug Report
+description: Report a bug in svgo-kt
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug!
+
+        Before opening, please confirm the bug reproduces with **svgo-kt** specifically.
+        If running the same input through upstream `svgo` produces the same output,
+        the issue almost certainly belongs in [svg/svgo](https://github.com/svg/svgo)
+        and we will pick it up once it ships there.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: input
+    attributes:
+      label: Input SVG
+      description: The SVG content (or a minimal reproduction of it) that triggers the bug.
+      render: xml
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: svgo-kt Config
+      description: |
+        The `Config` / DSL block you used (plugin list, params, `js2svg`, etc.).
+        Use `svgo {}` for the default `preset-default` pipeline.
+      render: kotlin
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Output
+      description: What you expected svgo-kt (or upstream svgo) to produce.
+      render: xml
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Output
+      description: |
+        What svgo-kt actually produced. Include any error messages or stack
+        traces.
+      render: xml
+    validations:
+      required: true
+
+  - type: input
+    id: upstream-comparison
+    attributes:
+      label: Does upstream `svgo` produce the same output?
+      description: |
+        Run the same input through `npx svgo` with the equivalent config and
+        report the result. If upstream is wrong too, please file there first.
+      placeholder: e.g. "Upstream svgo 4.0.1 produces the expected output. Only svgo-kt diverges."
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: svgo-kt Version
+      placeholder: e.g. 4.0.1-0.1.0 or commit SHA
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform / Target
+      multiple: true
+      options:
+        - JVM
+        - JS (Node)
+        - Linux x64
+        - Windows x64 (MinGW)
+        - macOS arm64
+        - macOS x64
+        - All targets
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: e.g. JDK 17 / Kotlin 2.3.20 / macOS 15

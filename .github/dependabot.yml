@@ -1,0 +1,34 @@
+version: 2
+updates:
+  # Main module + samples + included builds. The top-level `/` directory
+  # registers a single Gradle ecosystem and Dependabot will discover every
+  # `build.gradle.kts` reachable from settings, including `build-logic/`.
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "type: dependency"
+      - "type: gradle"
+    groups:
+      kotlinx-coroutines:
+        patterns:
+          - "org.jetbrains.kotlinx:kotlinx-coroutines-*"
+      kotlin:
+        patterns:
+          - "org.jetbrains.kotlin:*"
+      kss:
+        patterns:
+          - "dev.tonholo.kss:*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "type: dependency"
+      - "type: ci"
+    groups:
+      actions:
+        patterns:
+          - "*"

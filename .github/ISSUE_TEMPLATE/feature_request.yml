@@ -1,0 +1,48 @@
+name: Feature Request
+description: Suggest a Kotlin-side enhancement to svgo-kt
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement!
+
+        > **Note:** svgo-kt aims to mirror upstream svgo's plugin behavior. New
+        > plugins or behavioral changes that are not yet in upstream svgo are
+        > out of scope -- please request those at
+        > [svg/svgo](https://github.com/svg/svgo) first. This template is for
+        > Kotlin-side improvements (DSL, multiplatform support, performance,
+        > API ergonomics, etc.).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Motivation
+      description: What problem does this feature solve? Why is it needed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: |
+        Describe how you'd like this to work. Include rough API sketches,
+        DSL examples, or behavior diffs if applicable.
+      render: kotlin
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative approaches you've considered.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: |
+        Any other context, screenshots, prior-art links, or upstream svgo
+        references that would help us evaluate the request.
