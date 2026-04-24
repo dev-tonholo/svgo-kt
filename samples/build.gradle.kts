@@ -1,9 +1,16 @@
 plugins {
+    id("dev.tonholo.svgokt.conventions.common")
     alias(libs.plugins.org.jetbrains.kotlin.multiplatform)
 }
 
 kotlin {
-    createSvgoKtNativePlatforms().forEach { target ->
+    val nativeTargets = listOf(
+        macosArm64(),
+        macosX64(),
+        linuxX64(),
+        mingwX64(),
+    )
+    nativeTargets.forEach { target ->
         target.binaries {
             executable {
                 entryPoint = "main"
@@ -13,15 +20,24 @@ kotlin {
         }
     }
 
-    createJsPlatform("svgo-sample")
+    js {
+        outputModuleName.set("svgo-sample")
+        binaries.executable()
+        nodejs()
+        browser {
+            commonWebpackConfig {
+                outputFileName = "svgo-sample.js"
+            }
+        }
+    }
 
-    createJvmPlatform()
+    jvm()
 
     sourceSets {
         commonMain.dependencies {
             implementation(projects.svgoKt)
         }
-        nativeMain.dependencies {  }
+        nativeMain.dependencies { }
         jsMain.dependencies {
             implementation(libs.kotlinx.coroutines.js)
             implementation(npm("svgo", "3.2.0"))
@@ -30,11 +46,4 @@ kotlin {
             implementation(libs.kotlinx.coroutines.jvm)
         }
     }
-}
-
-rootProject.plugins.withType<org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin> {
-    rootProject.extensions.configure<org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsEnvSpec> {
-        download = false
-    }
-    // "true" for default behavior
 }

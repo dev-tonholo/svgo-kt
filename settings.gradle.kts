@@ -20,6 +20,6 @@ dependencyResolutionManagement {
     }
 }
 
-includeBuild("build-support")
+includeBuild("build-logic")
 include(":svgo-kt")
 include(":samples")
