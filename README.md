@@ -49,11 +49,136 @@ issue in the [SVGO](https://github.com/svg/svgo) repository.
 > We do not plan to fix issues within the [SVGO](https://github.com/svg/svgo) logic 
 > on our side before they address it.
 
-# Usage
-As this is a Kotlin library, the usage of this library will differ from the usage 
-of [SVGO](https://github.com/svg/svgo), which was built on top of JavaScript.
+# Supported targets
+svgo-kt is a Kotlin Multiplatform library and is usable from any KMP project
+that targets one of:
 
-TBD.
+- JVM (including Android)
+- Kotlin/JS — **klib consumers only**; this artifact is not a drop-in
+  replacement for the npm `svgo` package. If you need `svgo` in a pure
+  JavaScript/Node project, use the original
+  [svgo](https://github.com/svg/svgo).
+- Kotlin/Native: `linuxX64`, `mingwX64`, `macosArm64`, `macosX64`
+
+# Versioning
+Releases use the KSP-style compound version `<svgo-upstream>-<svgo-kt>`:
+
+```
+4.0.1-0.1.0
+└─┬─┘ └─┬─┘
+  │     └── svgo-kt's own semver (bumped for Kotlin-side changes)
+  └──────── upstream SVGO version this release mirrors
+```
+
+The upstream SVGO version leads so consumers can see at a glance which SVGO
+release a given artifact targets. Our own semver increments independently for
+bug fixes, features, and breaking API changes on the Kotlin side.
+
+# Installation
+svgo-kt is published to Maven Central under `dev.tonholo:svgo-kt`.
+
+Add it to your Kotlin Multiplatform project:
+
+```kotlin
+// build.gradle.kts
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation("dev.tonholo:svgo-kt:4.0.1-0.1.0")
+        }
+    }
+}
+```
+
+For a JVM-only project:
+
+```kotlin
+dependencies {
+    implementation("dev.tonholo:svgo-kt:4.0.1-0.1.0")
+}
+```
+
+# Usage
+svgo-kt exposes a small DSL around a suspend `optimize` function that mirrors
+SVGO's `optimize(svgString, config)` entry point. Because it uses `suspend`,
+all examples below assume a coroutine scope (`runBlocking`, `runTest`,
+`viewModelScope`, etc.).
+
+## Minimal: run `preset-default` on an SVG string
+```kotlin
+import svgokt.domain.builder.svgo
+
+val optimizer = svgo {} // empty config == preset-default (matches `svgo` CLI)
+val result = optimizer.optimize(input = rawSvgString)
+println(result.data)
+```
+
+## Configure plugins explicitly
+Pick individual plugins, mix in your own, or override plugin parameters via
+the `config { plugin { ... } }` DSL:
+
+```kotlin
+import svgokt.domain.builder.svgo
+import svgokt.plugins.builtin.CleanupIds
+
+val optimizer = svgo {
+    config {
+        multipass = true
+        floatPrecision = 2
+        js2svg {
+            pretty = true
+            indent = 2
+        }
+        // By builtin name (default parameters).
+        plugin(name = "removeComments")
+        plugin(name = "removeDimensions")
+        // Pass a plugin instance to customize parameters via its typed API.
+        plugin(
+            CleanupIds(
+                params = CleanupIds.Params(
+                    minify = false,
+                    preserve = setOf("logo", "brand"),
+                ),
+            ),
+        )
+    }
+}
+
+val result = optimizer.optimize(input = rawSvgString)
+```
+
+You can also pass a one-off `Config` per call; it overrides the default
+config the optimizer was built with:
+
+```kotlin
+import svgokt.domain.Config
+import svgokt.domain.builder.stringifyOptions
+import svgokt.domain.plugins.PluginConfig
+
+val optimizer = svgo {}
+val result = optimizer.optimize(
+    input = rawSvgString,
+    config = Config(
+        plugins = listOf(PluginConfig.BuiltinByName(name = "removeMetadata")),
+        js2svg = stringifyOptions { pretty = true },
+    ),
+)
+```
+
+## Built-in plugins
+All 54 SVGO builtins are implemented. A few of the most common:
+
+- `preset-default` (runs the standard safe set, like the `svgo` CLI default)
+- `removeComments`, `removeMetadata`, `removeDimensions`
+- `cleanupIds`, `cleanupAttrs`, `cleanupNumericValues`
+- `convertColors`, `convertPathData`, `convertShapeToPath`
+- `inlineStyles`, `minifyStyles`
+- `mergePaths`, `mergeStyles`
+- `sortAttrs`, `sortDefsChildren`
+
+See `svgo-kt/src/commonMain/kotlin/svgokt/plugins/builtinPlugins.kt` for the
+full list and `config/` in [SVGO](https://github.com/svg/svgo) for parameter
+reference.
 
 # License and Copyright
 This software is released under the terms of the [MIT license](LICENSE).
