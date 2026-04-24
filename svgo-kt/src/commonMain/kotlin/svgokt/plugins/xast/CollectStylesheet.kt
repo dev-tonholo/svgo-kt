@@ -49,8 +49,9 @@ fun collectStylesheet(root: XastRoot): Stylesheet {
 @Suppress("ReturnCount")
 private fun compareSpecificity(a: Specificity, b: Specificity): Int {
     for (i in 0 until SPECIFICITY_COMPONENTS) {
-        if (a[i] < b[i]) return -1
-        else if (a[i] > b[i]) return 1
+        if (a[i] < b[i]) {
+            return -1
+        } else if (a[i] > b[i]) return 1
     }
     return 0
 }
@@ -92,7 +93,11 @@ private fun parseAtRule(css: String, start: Int, dynamic: Boolean, rules: Mutabl
     val atName = prelude.removePrefix("@").substringBefore(' ').substringBefore('{').trim()
     var depth = 1
     var j = braceIdx + 1
-    while (j < css.length && depth > 0) { if (css[j] == '{') depth++; if (css[j] == '}') depth--; j++ }
+    while (j < css.length && depth > 0) {
+        if (css[j] == '{') depth++;
+        if (css[j] == '}') depth--;
+        j++
+    }
     if (atName in KF) return j
     val inner = css.substring(startIndex = braceIdx + 1, endIndex = j - 1)
     rules.addAll(parseStylesheet(css = inner, dynamic = true))
@@ -101,28 +106,41 @@ private fun parseAtRule(css: String, start: Int, dynamic: Boolean, rules: Mutabl
 
 private fun parseRuleSelectors(selText: String, declText: String, dynamic: Boolean, rules: MutableList<StylesheetRule>) {
     val decls = declText.split(';').mapNotNull { part ->
-        val t = part.trim(); if (t.isEmpty()) return@mapNotNull null
-        val ci = t.indexOf(':'); if (ci <= 0) return@mapNotNull null
+        val t = part.trim();
+        if (t.isEmpty()) return@mapNotNull null
+        val ci = t.indexOf(':');
+        if (ci <= 0) return@mapNotNull null
         val n = t.substring(startIndex = 0, endIndex = ci).trim()
         var v = t.substring(startIndex = ci + 1).trim()
-        val imp = v.contains("!important"); if (imp) v = v.replace("!important", "").trim()
+        val imp = v.contains("!important");
+        if (imp) v = v.replace("!important", "").trim()
         StylesheetDeclaration(name = n, value = v, important = imp)
     }
     if (decls.isEmpty()) return
     for (sel in selText.split(',')) {
-        val trimmed = sel.trim(); if (trimmed.isEmpty()) continue
+        val trimmed = sel.trim();
+        if (trimmed.isEmpty()) continue
         var hasPseudo = false
         val matchSel = trimmed.replace(Regex("::?[a-zA-Z-]+(?:\\([^)]*\\))?")) { m ->
-            if (!m.value.startsWith("::")) hasPseudo = true; ""
+            if (!m.value.startsWith("::")) hasPseudo = true;
+            ""
         }.trim()
-        rules.add(StylesheetRule(dynamic = hasPseudo || dynamic, selector = matchSel.ifEmpty { trimmed },
-            specificity = calcSpec(trimmed), declarations = decls))
+        rules.add(
+            StylesheetRule(
+                dynamic = hasPseudo || dynamic,
+                selector = matchSel.ifEmpty { trimmed },
+                specificity = calcSpec(trimmed),
+                declarations = decls
+            )
+        )
     }
 }
 
 @Suppress("MagicNumber")
 private fun calcSpec(sel: String): Specificity {
-    var a = 0; var b = 0; var c = 0
+    var a = 0;
+    var b = 0;
+    var c = 0
     a += Regex("#[a-zA-Z_][a-zA-Z0-9_-]*").findAll(sel).count()
     b += Regex("\\.[a-zA-Z_][a-zA-Z0-9_-]*").findAll(sel).count()
     b += Regex("\\[[^\\]]+\\]").findAll(sel).count()

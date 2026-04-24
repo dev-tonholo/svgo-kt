@@ -17,7 +17,6 @@ import svgokt.path.parsePathData
 import svgokt.plugins.Collections
 import svgokt.plugins.xast.collectStylesheet
 import svgokt.plugins.xast.detachFromParent
-import svgokt.style.computeStyle
 import svgokt.xast.querySelector
 
 /**

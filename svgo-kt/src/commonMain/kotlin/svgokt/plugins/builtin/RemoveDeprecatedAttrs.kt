@@ -1,7 +1,7 @@
 package svgokt.plugins.builtin
 
+import dev.tonholo.kss.parser.ast.css.syntax.node.Selector
 import svgokt.domain.XastElement
-import svgokt.domain.XastParent
 import svgokt.domain.plugins.Plugin
 import svgokt.domain.plugins.PluginFn
 import svgokt.domain.plugins.PluginParams
@@ -11,9 +11,7 @@ import svgokt.domain.plugins.VisitorNode
 import svgokt.plugins.DeprecatedAttrs
 import svgokt.plugins.SvgElements
 import svgokt.plugins.attrsGroupsDeprecated
-import dev.tonholo.kss.parser.ast.css.syntax.node.Selector
 import svgokt.plugins.xast.collectStylesheet
-import svgokt.style.includesAttrSelector
 import svgokt.xast.parseSelectors
 
 private const val PARAM_REMOVE_UNSAFE = "removeUnsafe"
@@ -134,9 +132,11 @@ object RemoveDeprecatedAttrs : Plugin<PluginParams> {
 /**
  * Default parameters for removeDeprecatedAttrs.
  */
-private class RemoveDeprecatedAttrsParams : PluginParams, Map<String, Any> by mapOf(
-    PARAM_REMOVE_UNSAFE to false,
-)
+private class RemoveDeprecatedAttrsParams :
+    PluginParams,
+    Map<String, Any> by mapOf(
+        PARAM_REMOVE_UNSAFE to false,
+    )
 
 private fun PluginParams.boolParam(key: String, defaultValue: Boolean): Boolean {
     val value = this[key] ?: return defaultValue

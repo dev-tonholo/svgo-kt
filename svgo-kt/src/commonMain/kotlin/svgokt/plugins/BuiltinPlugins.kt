@@ -49,9 +49,9 @@ import svgokt.plugins.builtin.RemoveUnusedNS
 import svgokt.plugins.builtin.RemoveUselessDefs
 import svgokt.plugins.builtin.RemoveUselessStrokeAndFill
 import svgokt.plugins.builtin.RemoveViewBox
-import svgokt.plugins.builtin.RemoveXlink
 import svgokt.plugins.builtin.RemoveXMLNS
 import svgokt.plugins.builtin.RemoveXMLProcInst
+import svgokt.plugins.builtin.RemoveXlink
 import svgokt.plugins.builtin.ReusePaths
 import svgokt.plugins.builtin.SortAttrs
 import svgokt.plugins.builtin.SortDefsChildren

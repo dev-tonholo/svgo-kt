@@ -146,9 +146,11 @@ class InlineStyles(
         }
 
         // Sort by specificity, highest first (matching JS: sort ascending then reverse)
-        allSelectors.sortWith(compareBy<SelectorWithEntry> { it.selector.specificity.a }
-            .thenBy { it.selector.specificity.b }
-            .thenBy { it.selector.specificity.c })
+        allSelectors.sortWith(
+            compareBy<SelectorWithEntry> { it.selector.specificity.a }
+                .thenBy { it.selector.specificity.b }
+                .thenBy { it.selector.specificity.c }
+        )
         allSelectors.reverse()
 
         val allSelectorItems = allSelectors.map { it.selector }

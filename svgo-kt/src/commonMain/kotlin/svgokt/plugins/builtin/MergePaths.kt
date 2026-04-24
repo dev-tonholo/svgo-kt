@@ -194,8 +194,12 @@ object MergePaths : Plugin<MergePathsParams> {
 
     private val URL_REF_ATTRS = listOf("fill", "filter", "stroke")
     private val MARKER_AND_CLIP_ATTRS = listOf(
-        "marker-start", "marker-mid", "marker-end",
-        "clip-path", "mask", "mask-image",
+        "marker-start",
+        "marker-mid",
+        "marker-end",
+        "clip-path",
+        "mask",
+        "mask-image",
     )
 
     private fun isEligiblePath(child: XastChild?): Boolean {

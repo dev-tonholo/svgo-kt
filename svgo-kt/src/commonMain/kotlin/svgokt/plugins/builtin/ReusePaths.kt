@@ -10,7 +10,6 @@ import svgokt.domain.plugins.PluginFn
 import svgokt.domain.plugins.VisitState
 import svgokt.domain.plugins.Visitor
 import svgokt.domain.plugins.VisitorNode
-import svgokt.plugins.xast.detachFromParent
 
 /**
  * Finds duplicate `<path>` elements with the same `d`, `fill`, and `stroke`

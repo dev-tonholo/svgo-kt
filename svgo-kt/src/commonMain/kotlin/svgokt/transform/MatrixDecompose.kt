@@ -216,7 +216,11 @@ private fun optimize(
                 val data = rt.data
                 val sliceEnd = if (data.getOrElse(index = 1) { 0.0 } != 0.0 ||
                     data.getOrElse(index = 2) { 0.0 } != 0.0
-                ) 3 else 1
+                ) {
+                    3
+                } else {
+                    1
+                }
                 optimized.add(TransformItem(name = "rotate", data = data.sliceArray(indices = 0 until sliceEnd)))
             }
 

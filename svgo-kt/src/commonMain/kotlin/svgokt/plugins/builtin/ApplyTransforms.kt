@@ -30,6 +30,7 @@ private val REG_NUMERIC_VALUES = """[-+]?(\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?""".t
 private const val ARC_RX_INDEX = 0
 private const val ARC_RY_INDEX = 1
 private const val ARC_ROTATION_INDEX = 2
+
 @Suppress("UnusedPrivateProperty")
 private const val ARC_LARGE_ARC_INDEX = 3
 private const val ARC_SWEEP_INDEX = 4
@@ -187,103 +188,166 @@ private fun applyMatrixToPathData(pathData: List<PathDataItem>, matrix: DoubleAr
         var command = pathItem.command
         var args = pathItem.args
         if (command == 'M') {
-            cursor[0] = args[0]; cursor[1] = args[1]
-            start[0] = cursor[0]; start[1] = cursor[1]
+            cursor[0] = args[0]
+            cursor[1] = args[1]
+            start[0] = cursor[0]
+            start[1] = cursor[1]
             val (x, y) = transformAbsolutePoint(matrix, args[0], args[1])
-            args[0] = x; args[1] = y
+            args[0] = x
+            args[1] = y
         }
         if (command == 'm') {
-            cursor[0] += args[0]; cursor[1] += args[1]
-            start[0] = cursor[0]; start[1] = cursor[1]
+            cursor[0] += args[0]
+            cursor[1] += args[1]
+            start[0] = cursor[0]
+            start[1] = cursor[1]
             val (x, y) = transformRelativePoint(matrix, args[0], args[1])
-            args[0] = x; args[1] = y
+            args[0] = x
+            args[1] = y
         }
-        if (command == 'H') { command = 'L'; args = mutableListOf(args[0], cursor[1]) }
-        if (command == 'h') { command = 'l'; args = mutableListOf(args[0], 0.0) }
-        if (command == 'V') { command = 'L'; args = mutableListOf(cursor[0], args[0]) }
-        if (command == 'v') { command = 'l'; args = mutableListOf(0.0, args[0]) }
+        if (command == 'H') {
+            command = 'L'
+            args = mutableListOf(args[0], cursor[1])
+        }
+        if (command == 'h') {
+            command = 'l'
+            args = mutableListOf(args[0], 0.0)
+        }
+        if (command == 'V') {
+            command = 'L'
+            args = mutableListOf(cursor[0], args[0])
+        }
+        if (command == 'v') {
+            command = 'l'
+            args = mutableListOf(0.0, args[0])
+        }
         if (command == 'L') {
-            cursor[0] = args[0]; cursor[1] = args[1]
+            cursor[0] = args[0]
+            cursor[1] = args[1]
             val (x, y) = transformAbsolutePoint(matrix, args[0], args[1])
-            args[0] = x; args[1] = y
+            args[0] = x
+            args[1] = y
         }
         if (command == 'l') {
-            cursor[0] += args[0]; cursor[1] += args[1]
+            cursor[0] += args[0]
+            cursor[1] += args[1]
             val (x, y) = transformRelativePoint(matrix, args[0], args[1])
-            args[0] = x; args[1] = y
+            args[0] = x
+            args[1] = y
         }
         if (command == 'C') {
-            cursor[0] = args[4]; cursor[1] = args[5]
+            cursor[0] = args[4]
+            cursor[1] = args[5]
             val (x1, y1) = transformAbsolutePoint(matrix, args[0], args[1])
             val (x2, y2) = transformAbsolutePoint(matrix, args[2], args[3])
             val (x, y) = transformAbsolutePoint(matrix, args[4], args[5])
-            args[0] = x1; args[1] = y1; args[2] = x2; args[3] = y2; args[4] = x; args[5] = y
+            args[0] = x1
+            args[1] = y1
+            args[2] = x2
+            args[3] = y2
+            args[4] = x
+            args[5] = y
         }
         if (command == 'c') {
-            cursor[0] += args[4]; cursor[1] += args[5]
+            cursor[0] += args[4]
+            cursor[1] += args[5]
             val (x1, y1) = transformRelativePoint(matrix, args[0], args[1])
             val (x2, y2) = transformRelativePoint(matrix, args[2], args[3])
             val (x, y) = transformRelativePoint(matrix, args[4], args[5])
-            args[0] = x1; args[1] = y1; args[2] = x2; args[3] = y2; args[4] = x; args[5] = y
+            args[0] = x1
+            args[1] = y1
+            args[2] = x2
+            args[3] = y2
+            args[4] = x
+            args[5] = y
         }
         if (command == 'S') {
-            cursor[0] = args[2]; cursor[1] = args[3]
+            cursor[0] = args[2]
+            cursor[1] = args[3]
             val (x2, y2) = transformAbsolutePoint(matrix, args[0], args[1])
             val (x, y) = transformAbsolutePoint(matrix, args[2], args[3])
-            args[0] = x2; args[1] = y2; args[2] = x; args[3] = y
+            args[0] = x2
+            args[1] = y2
+            args[2] = x
+            args[3] = y
         }
         if (command == 's') {
-            cursor[0] += args[2]; cursor[1] += args[3]
+            cursor[0] += args[2]
+            cursor[1] += args[3]
             val (x2, y2) = transformRelativePoint(matrix, args[0], args[1])
             val (x, y) = transformRelativePoint(matrix, args[2], args[3])
-            args[0] = x2; args[1] = y2; args[2] = x; args[3] = y
+            args[0] = x2
+            args[1] = y2
+            args[2] = x
+            args[3] = y
         }
         if (command == 'Q') {
-            cursor[0] = args[2]; cursor[1] = args[3]
+            cursor[0] = args[2]
+            cursor[1] = args[3]
             val (x1, y1) = transformAbsolutePoint(matrix, args[0], args[1])
             val (x, y) = transformAbsolutePoint(matrix, args[2], args[3])
-            args[0] = x1; args[1] = y1; args[2] = x; args[3] = y
+            args[0] = x1
+            args[1] = y1
+            args[2] = x
+            args[3] = y
         }
         if (command == 'q') {
-            cursor[0] += args[2]; cursor[1] += args[3]
+            cursor[0] += args[2]
+            cursor[1] += args[3]
             val (x1, y1) = transformRelativePoint(matrix, args[0], args[1])
             val (x, y) = transformRelativePoint(matrix, args[2], args[3])
-            args[0] = x1; args[1] = y1; args[2] = x; args[3] = y
+            args[0] = x1
+            args[1] = y1
+            args[2] = x
+            args[3] = y
         }
         if (command == 'T') {
-            cursor[0] = args[0]; cursor[1] = args[1]
+            cursor[0] = args[0]
+            cursor[1] = args[1]
             val (x, y) = transformAbsolutePoint(matrix, args[0], args[1])
-            args[0] = x; args[1] = y
+            args[0] = x
+            args[1] = y
         }
         if (command == 't') {
-            cursor[0] += args[0]; cursor[1] += args[1]
+            cursor[0] += args[0]
+            cursor[1] += args[1]
             val (x, y) = transformRelativePoint(matrix, args[0], args[1])
-            args[0] = x; args[1] = y
+            args[0] = x
+            args[1] = y
         }
         if (command == 'A') {
             transformArc(cursor = cursor, arc = args, transform = matrix)
-            cursor[0] = args[ARC_X_INDEX]; cursor[1] = args[ARC_Y_INDEX]
+            cursor[0] = args[ARC_X_INDEX]
+            cursor[1] = args[ARC_Y_INDEX]
             if (abs(args[ARC_ROTATION_INDEX]) > ROTATION_THRESHOLD) {
-                val a = args[ARC_RX_INDEX]; val rotation = args[ARC_ROTATION_INDEX]
-                args[ARC_RX_INDEX] = args[ARC_RY_INDEX]; args[ARC_RY_INDEX] = a
+                val a = args[ARC_RX_INDEX]
+                val rotation = args[ARC_ROTATION_INDEX]
+                args[ARC_RX_INDEX] = args[ARC_RY_INDEX]
+                args[ARC_RY_INDEX] = a
                 args[ARC_ROTATION_INDEX] = rotation + if (rotation > 0) -90.0 else 90.0
             }
             val (x, y) = transformAbsolutePoint(matrix, args[ARC_X_INDEX], args[ARC_Y_INDEX])
-            args[ARC_X_INDEX] = x; args[ARC_Y_INDEX] = y
+            args[ARC_X_INDEX] = x
+            args[ARC_Y_INDEX] = y
         }
         if (command == 'a') {
             transformArc(cursor = doubleArrayOf(0.0, 0.0), arc = args, transform = matrix)
-            cursor[0] += args[ARC_X_INDEX]; cursor[1] += args[ARC_Y_INDEX]
+            cursor[0] += args[ARC_X_INDEX]
+            cursor[1] += args[ARC_Y_INDEX]
             if (abs(args[ARC_ROTATION_INDEX]) > ROTATION_THRESHOLD) {
-                val a = args[ARC_RX_INDEX]; val rotation = args[ARC_ROTATION_INDEX]
-                args[ARC_RX_INDEX] = args[ARC_RY_INDEX]; args[ARC_RY_INDEX] = a
+                val a = args[ARC_RX_INDEX]
+                val rotation = args[ARC_ROTATION_INDEX]
+                args[ARC_RX_INDEX] = args[ARC_RY_INDEX]
+                args[ARC_RY_INDEX] = a
                 args[ARC_ROTATION_INDEX] = rotation + if (rotation > 0) -90.0 else 90.0
             }
             val (x, y) = transformRelativePoint(matrix, args[ARC_X_INDEX], args[ARC_Y_INDEX])
-            args[ARC_X_INDEX] = x; args[ARC_Y_INDEX] = y
+            args[ARC_X_INDEX] = x
+            args[ARC_Y_INDEX] = y
         }
         if (command == 'z' || command == 'Z') {
-            cursor[0] = start[0]; cursor[1] = start[1]
+            cursor[0] = start[0]
+            cursor[1] = start[1]
         }
         pathItem.command = command
         val newArgs = args.toList()
@@ -304,7 +368,11 @@ private fun transformArc(cursor: DoubleArray, arc: MutableList<Double>, transfor
     if (a > 0 && b > 0) {
         var h = (x * cosRot + y * sinRot).pow(2) / (4.0 * a * a) +
             (y * cosRot - x * sinRot).pow(2) / (4.0 * b * b)
-        if (h > 1) { h = sqrt(h); a *= h; b *= h }
+        if (h > 1) {
+            h = sqrt(h)
+            a *= h
+            b *= h
+        }
     }
     val ellipse = doubleArrayOf(a * cosRot, a * sinRot, -b * sinRot, b * cosRot, 0.0, 0.0)
     val m = multiplyTransformMatrices(a = transform, b = ellipse)

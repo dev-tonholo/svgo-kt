@@ -242,46 +242,61 @@ internal fun convertRelativeToAbsolute(data: List<PathDataItem>): List<PathDataI
             cursor[1] = args[1]
         }
         if (cmd == 'c') {
-            args[0] += cursor[0]; args[1] += cursor[1]
-            args[2] += cursor[0]; args[3] += cursor[1]
-            args[4] += cursor[0]; args[5] += cursor[1]
+            args[0] += cursor[0]
+            args[1] += cursor[1]
+            args[2] += cursor[0]
+            args[3] += cursor[1]
+            args[4] += cursor[0]
+            args[5] += cursor[1]
             cmd = 'C'
         }
         if (cmd == 'C') {
-            cursor[0] = args[4]; cursor[1] = args[5]
+            cursor[0] = args[4]
+            cursor[1] = args[5]
         }
         if (cmd == 's') {
-            args[0] += cursor[0]; args[1] += cursor[1]
-            args[2] += cursor[0]; args[3] += cursor[1]
+            args[0] += cursor[0]
+            args[1] += cursor[1]
+            args[2] += cursor[0]
+            args[3] += cursor[1]
             cmd = 'S'
         }
         if (cmd == 'S') {
-            cursor[0] = args[2]; cursor[1] = args[3]
+            cursor[0] = args[2]
+            cursor[1] = args[3]
         }
         if (cmd == 'q') {
-            args[0] += cursor[0]; args[1] += cursor[1]
-            args[2] += cursor[0]; args[3] += cursor[1]
+            args[0] += cursor[0]
+            args[1] += cursor[1]
+            args[2] += cursor[0]
+            args[3] += cursor[1]
             cmd = 'Q'
         }
         if (cmd == 'Q') {
-            cursor[0] = args[2]; cursor[1] = args[3]
+            cursor[0] = args[2]
+            cursor[1] = args[3]
         }
         if (cmd == 't') {
-            args[0] += cursor[0]; args[1] += cursor[1]
+            args[0] += cursor[0]
+            args[1] += cursor[1]
             cmd = 'T'
         }
         if (cmd == 'T') {
-            cursor[0] = args[0]; cursor[1] = args[1]
+            cursor[0] = args[0]
+            cursor[1] = args[1]
         }
         if (cmd == 'a') {
-            args[5] += cursor[0]; args[6] += cursor[1]
+            args[5] += cursor[0]
+            args[6] += cursor[1]
             cmd = 'A'
         }
         if (cmd == 'A') {
-            cursor[0] = args[5]; cursor[1] = args[6]
+            cursor[0] = args[5]
+            cursor[1] = args[6]
         }
         if (cmd == 'z' || cmd == 'Z') {
-            cursor[0] = start[0]; cursor[1] = start[1]
+            cursor[0] = start[0]
+            cursor[1] = start[1]
             cmd = 'z'
         }
 
@@ -362,10 +377,13 @@ private fun gatherPoints(pathData: List<PathDataItem>): PointsResult {
             }
             'C' -> {
                 if (basePoint != null) {
-                    addPoint(subPath, doubleArrayOf(
-                        0.5 * (basePoint[0] + data[0]),
-                        0.5 * (basePoint[1] + data[1]),
-                    ))
+                    addPoint(
+                        subPath,
+                        doubleArrayOf(
+                            0.5 * (basePoint[0] + data[0]),
+                            0.5 * (basePoint[1] + data[1]),
+                        )
+                    )
                 }
                 addPoint(subPath, doubleArrayOf(0.5 * (data[0] + data[2]), 0.5 * (data[1] + data[3])))
                 addPoint(subPath, doubleArrayOf(0.5 * (data[2] + data[4]), 0.5 * (data[3] + data[5])))
@@ -375,20 +393,26 @@ private fun gatherPoints(pathData: List<PathDataItem>): PointsResult {
                 if (basePoint != null && prev != null &&
                     (prev.command == 'C' || prev.command == 'S')
                 ) {
-                    addPoint(subPath, doubleArrayOf(
-                        basePoint[0] + 0.5 * prevCtrlPoint[0],
-                        basePoint[1] + 0.5 * prevCtrlPoint[1],
-                    ))
+                    addPoint(
+                        subPath,
+                        doubleArrayOf(
+                            basePoint[0] + 0.5 * prevCtrlPoint[0],
+                            basePoint[1] + 0.5 * prevCtrlPoint[1],
+                        )
+                    )
                     ctrlPoint = doubleArrayOf(
                         basePoint[0] + prevCtrlPoint[0],
                         basePoint[1] + prevCtrlPoint[1],
                     )
                 }
                 if (ctrlPoint != null) {
-                    addPoint(subPath, doubleArrayOf(
-                        0.5 * (ctrlPoint[0] + data[0]),
-                        0.5 * (ctrlPoint[1] + data[1]),
-                    ))
+                    addPoint(
+                        subPath,
+                        doubleArrayOf(
+                            0.5 * (ctrlPoint[0] + data[0]),
+                            0.5 * (ctrlPoint[1] + data[1]),
+                        )
+                    )
                 }
                 addPoint(subPath, doubleArrayOf(0.5 * (data[0] + data[2]), 0.5 * (data[1] + data[3])))
                 prevCtrlPoint = doubleArrayOf(data[2] - data[0], data[3] - data[1])
@@ -414,19 +438,28 @@ private fun gatherPoints(pathData: List<PathDataItem>): PointsResult {
                         }.toDoubleArray()
 
                         if (basePoint != null) {
-                            addPoint(subPath, doubleArrayOf(
-                                0.5 * (basePoint[0] + cData[0]),
-                                0.5 * (basePoint[1] + cData[1]),
-                            ))
+                            addPoint(
+                                subPath,
+                                doubleArrayOf(
+                                    0.5 * (basePoint[0] + cData[0]),
+                                    0.5 * (basePoint[1] + cData[1]),
+                                )
+                            )
                         }
-                        addPoint(subPath, doubleArrayOf(
-                            0.5 * (cData[0] + cData[2]),
-                            0.5 * (cData[1] + cData[3]),
-                        ))
-                        addPoint(subPath, doubleArrayOf(
-                            0.5 * (cData[2] + cData[4]),
-                            0.5 * (cData[3] + cData[5]),
-                        ))
+                        addPoint(
+                            subPath,
+                            doubleArrayOf(
+                                0.5 * (cData[0] + cData[2]),
+                                0.5 * (cData[1] + cData[3]),
+                            )
+                        )
+                        addPoint(
+                            subPath,
+                            doubleArrayOf(
+                                0.5 * (cData[2] + cData[4]),
+                                0.5 * (cData[3] + cData[5]),
+                            )
+                        )
                         if (curvesList.isNotEmpty()) {
                             basePoint = doubleArrayOf(cData[4], cData[5])
                             addPoint(subPath, basePoint)
@@ -594,8 +627,11 @@ private fun a2c(
     val newRes = mutableListOf<Double>()
     for (i in fullRes.indices) {
         newRes.add(
-            if (i % 2 != 0) rotateY(fullRes[i - 1], fullRes[i], rad)
-            else rotateX(fullRes[i], fullRes[i + 1], rad),
+            if (i % 2 != 0) {
+                rotateY(fullRes[i - 1], fullRes[i], rad)
+            } else {
+                rotateX(fullRes[i], fullRes[i + 1], rad)
+            },
         )
     }
     return newRes

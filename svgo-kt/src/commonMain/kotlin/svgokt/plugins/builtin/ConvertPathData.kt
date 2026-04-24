@@ -1,7 +1,6 @@
 package svgokt.plugins.builtin
 
 import svgokt.domain.XastElement
-import svgokt.domain.XastRoot
 import svgokt.domain.css.ComputedStyles
 import svgokt.domain.css.Stylesheet
 import svgokt.domain.plugins.Plugin
@@ -13,7 +12,6 @@ import svgokt.domain.plugins.VisitorNode
 import svgokt.path.PathDataItem
 import svgokt.path.js2path
 import svgokt.path.path2js
-import svgokt.path.stringifyPathData
 import svgokt.plugins.xast.collectStylesheet
 import svgokt.plugins.xast.visit
 import svgokt.style.computeStyle
@@ -219,13 +217,17 @@ class ConvertPathData(
 
             val strokeComputed = computedStyleMap["stroke"]
             val maybeHasStroke = strokeComputed != null &&
-                (strokeComputed is ComputedStyles.DynamicStyle ||
-                    (strokeComputed is ComputedStyles.StaticStyle && strokeComputed.value != "none"))
+                (
+                    strokeComputed is ComputedStyles.DynamicStyle ||
+                        (strokeComputed is ComputedStyles.StaticStyle && strokeComputed.value != "none")
+                    )
 
             val linecapComputed = computedStyleMap["stroke-linecap"]
             val maybeHasLinecap = linecapComputed != null &&
-                (linecapComputed is ComputedStyles.DynamicStyle ||
-                    (linecapComputed is ComputedStyles.StaticStyle && linecapComputed.value != "butt"))
+                (
+                    linecapComputed is ComputedStyles.DynamicStyle ||
+                        (linecapComputed is ComputedStyles.StaticStyle && linecapComputed.value != "butt")
+                    )
 
             val maybeHasStrokeAndLinecap = maybeHasStroke && maybeHasLinecap
 
@@ -577,8 +579,10 @@ class ConvertPathData(
                         !hasMarkerMid &&
                         (command == 'm' || command == 'h' || command == 'v') &&
                         prev.command.lowercaseChar() == command &&
-                        ((command != 'h' && command != 'v') ||
-                            (prev.args[0] >= 0) == (data[0] >= 0))
+                        (
+                            (command != 'h' && command != 'v') ||
+                                (prev.args[0] >= 0) == (data[0] >= 0)
+                            )
                     ) {
                         prev.args[0] += data[0]
                         if (command != 'h' && command != 'v') {
@@ -607,9 +611,11 @@ class ConvertPathData(
 
                     // Remove useless non-first path segments
                     if (params.removeUseless && !maybeHasStrokeAndLinecap) {
-                        if ((command == 'l' || command == 'h' || command == 'v' ||
-                                command == 'q' || command == 't' ||
-                                command == 'c' || command == 's') &&
+                        if ((
+                                command == 'l' || command == 'h' || command == 'v' ||
+                                    command == 'q' || command == 't' ||
+                                    command == 'c' || command == 's'
+                                ) &&
                             data.all { it == 0.0 }
                         ) {
                             index++
@@ -1249,10 +1255,14 @@ class ConvertPathData(
             var suffix = ""
 
             // Check if previous curve also fits the same arc
-            if ((prev.command == 'c' && isConvex(prev.args) &&
-                    isArcPrev(prev.args, circle, arcThreshold, arcTolerance, error)) ||
-                (prev.command == 'a' && prev.sdata != null &&
-                    isArcPrev(requireNotNull(prev.sdata), circle, arcThreshold, arcTolerance, error))
+            if ((
+                    prev.command == 'c' && isConvex(prev.args) &&
+                        isArcPrev(prev.args, circle, arcThreshold, arcTolerance, error)
+                    ) ||
+                (
+                    prev.command == 'a' && prev.sdata != null &&
+                        isArcPrev(requireNotNull(prev.sdata), circle, arcThreshold, arcTolerance, error)
+                    )
             ) {
                 arcCurves.add(index = 0, element = prev)
                 arc.base = prev.base
@@ -1448,15 +1458,23 @@ class ConvertPathData(
 
                 // Convert to absolute if shorter (or forced)
                 if (params.forceAbsolutePath ||
-                    (absoluteStr.length < relativeStr.length &&
-                        !(params.negativeExtraSpace &&
-                            command == prev.command &&
-                            prev.command.code > 96 &&
-                            absoluteStr.length == relativeStr.length - 1 &&
-                            (data[0] < 0 ||
-                                (kotlin.math.floor(data[0]) == 0.0 &&
-                                    data[0] % 1.0 != 0.0 &&
-                                    prev.args[prev.args.size - 1] % 1.0 != 0.0))))
+                    (
+                        absoluteStr.length < relativeStr.length &&
+                            !(
+                                params.negativeExtraSpace &&
+                                    command == prev.command &&
+                                    prev.command.code > 96 &&
+                                    absoluteStr.length == relativeStr.length - 1 &&
+                                    (
+                                        data[0] < 0 ||
+                                            (
+                                                kotlin.math.floor(data[0]) == 0.0 &&
+                                                    data[0] % 1.0 != 0.0 &&
+                                                    prev.args[prev.args.size - 1] % 1.0 != 0.0
+                                                )
+                                        )
+                                )
+                        )
                 ) {
                     item.command = command.uppercaseChar()
                     item.args.clear()
@@ -1487,8 +1505,10 @@ class ConvertPathData(
 
                 val delimiter = when {
                     i == 0 -> ""
-                    params.negativeExtraSpace && (value < 0 ||
-                        (itemStr.startsWith('.') && prev != null && prev % 1.0 != 0.0)) -> ""
+                    params.negativeExtraSpace && (
+                        value < 0 ||
+                            (itemStr.startsWith('.') && prev != null && prev % 1.0 != 0.0)
+                        ) -> ""
                     else -> " "
                 }
 

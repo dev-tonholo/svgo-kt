@@ -43,6 +43,7 @@ object RemoveUnknownsAndDefaults : Plugin<PluginParams> {
             PARAM_DEFAULT_MARKUP_DECLARATIONS,
             defaultValue = true,
         )
+
         @Suppress("UNUSED_VARIABLE")
         val uselessOverrides = params.boolParam(PARAM_USELESS_OVERRIDES, defaultValue = true)
         val keepDataAttrs = params.boolParam(PARAM_KEEP_DATA_ATTRS, defaultValue = true)
@@ -225,16 +226,18 @@ object RemoveUnknownsAndDefaults : Plugin<PluginParams> {
 /**
  * Default parameters for removeUnknownsAndDefaults.
  */
-private class RemoveUnknownsAndDefaultsParams : PluginParams, Map<String, Any> by mapOf(
-    PARAM_UNKNOWN_CONTENT to true,
-    PARAM_UNKNOWN_ATTRS to true,
-    PARAM_DEFAULT_ATTRS to true,
-    PARAM_DEFAULT_MARKUP_DECLARATIONS to true,
-    PARAM_USELESS_OVERRIDES to true,
-    PARAM_KEEP_DATA_ATTRS to true,
-    PARAM_KEEP_ARIA_ATTRS to true,
-    PARAM_KEEP_ROLE_ATTR to false,
-)
+private class RemoveUnknownsAndDefaultsParams :
+    PluginParams,
+    Map<String, Any> by mapOf(
+        PARAM_UNKNOWN_CONTENT to true,
+        PARAM_UNKNOWN_ATTRS to true,
+        PARAM_DEFAULT_ATTRS to true,
+        PARAM_DEFAULT_MARKUP_DECLARATIONS to true,
+        PARAM_USELESS_OVERRIDES to true,
+        PARAM_KEEP_DATA_ATTRS to true,
+        PARAM_KEEP_ARIA_ATTRS to true,
+        PARAM_KEEP_ROLE_ATTR to false,
+    )
 
 private fun PluginParams.boolParam(key: String, defaultValue: Boolean): Boolean {
     val value = this[key] ?: return defaultValue

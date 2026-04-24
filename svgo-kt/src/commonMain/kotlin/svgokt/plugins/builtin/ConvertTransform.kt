@@ -3,7 +3,6 @@
 package svgokt.plugins.builtin
 
 import svgokt.domain.XastElement
-import svgokt.domain.XastParent
 import svgokt.domain.plugins.Plugin
 import svgokt.domain.plugins.PluginFn
 import svgokt.domain.plugins.PluginParams
@@ -51,20 +50,21 @@ object ConvertTransform : Plugin<ConvertTransform.Params> {
         val collapseIntoOne: Boolean = true,
         val leadingZero: Boolean = true,
         val negativeExtraSpace: Boolean = false,
-    ) : PluginParams, Map<String, Any> by mapOf(
-        "convertToShorts" to convertToShorts,
-        "degPrecision" to (degPrecision ?: -1),
-        "floatPrecision" to floatPrecision,
-        "transformPrecision" to transformPrecision,
-        "matrixToTransform" to matrixToTransform,
-        "shortTranslate" to shortTranslate,
-        "shortScale" to shortScale,
-        "shortRotate" to shortRotate,
-        "removeUseless" to removeUseless,
-        "collapseIntoOne" to collapseIntoOne,
-        "leadingZero" to leadingZero,
-        "negativeExtraSpace" to negativeExtraSpace,
-    )
+    ) : PluginParams,
+        Map<String, Any> by mapOf(
+            "convertToShorts" to convertToShorts,
+            "degPrecision" to (degPrecision ?: -1),
+            "floatPrecision" to floatPrecision,
+            "transformPrecision" to transformPrecision,
+            "matrixToTransform" to matrixToTransform,
+            "shortTranslate" to shortTranslate,
+            "shortScale" to shortScale,
+            "shortRotate" to shortRotate,
+            "removeUseless" to removeUseless,
+            "collapseIntoOne" to collapseIntoOne,
+            "leadingZero" to leadingZero,
+            "negativeExtraSpace" to negativeExtraSpace,
+        )
 
     override val name: String = "convertTransform"
     override val description: String = "collapses multiple transformations and optimizes it"

@@ -1,7 +1,6 @@
 package svgokt.plugins.builtin
 
 import svgokt.domain.XastCdata
-import svgokt.domain.XastComment
 import svgokt.domain.XastText
 import svgokt.domain.plugins.Plugin
 import svgokt.domain.plugins.PluginFn
