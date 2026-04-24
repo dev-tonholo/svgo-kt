@@ -49,3 +49,22 @@ mavenPublishing {
         }
     }
 }
+
+// GitHub Packages is a secondary publishing target. Vanniktech's
+// `mavenPublishing` block only configures Maven Central; the GitHub Packages
+// repository is added through the regular `publishing` extension so the
+// `publishAllPublicationsToGitHubPackagesRepository` task is generated.
+publishing {
+    repositories {
+        maven {
+            name = "githubPackages"
+            url = uri("https://maven.pkg.github.com/rafaeltonholo/svgo-kt")
+            credentials {
+                username = findProperty("github.username") as String?
+                    ?: System.getenv("GITHUB_ACTOR")
+                password = findProperty("github.token") as String?
+                    ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}
