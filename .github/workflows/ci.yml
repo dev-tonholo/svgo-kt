@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: ./.github/actions/setup
+
+      - name: Build
+        run: ./gradlew :svgo-kt:assemble
+
+      - name: JVM tests (full 363-fixture suite + unit tests)
+        run: ./gradlew :svgo-kt:jvmTest
+
+      - name: JS (node) tests
+        run: ./gradlew :svgo-kt:jsNodeTest
+
+      - name: Linux x64 native tests
+        run: ./gradlew :svgo-kt:linuxX64Test
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v4.6.2
+        with:
+          name: test-reports
+          path: |
+            svgo-kt/build/reports/tests/
+            svgo-kt/build/test-results/
+          retention-days: 7
+
+  lint:
+    name: Detekt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: ./.github/actions/setup
+
+      - name: Run detekt
+        run: ./gradlew :svgo-kt:detekt
+
+      - name: Upload detekt reports on failure
+        if: failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v4.6.2
+        with:
+          name: detekt-reports
+          path: svgo-kt/build/reports/detekt/
+          retention-days: 7
