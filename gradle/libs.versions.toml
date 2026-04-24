@@ -1,7 +1,7 @@
 [versions]
 kotlin = "2.3.20"
 detekt = "1.23.8"
-kss = "1.0.2"
+kss = "1.0.3"
 xmlutil = "0.91.3"
 kotlin-coroutines = "1.10.2"
 
