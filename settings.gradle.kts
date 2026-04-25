@@ -23,3 +23,4 @@ dependencyResolutionManagement {
 includeBuild("build-logic")
 include(":svgo-kt")
 include(":samples")
+include(":benchmarks")

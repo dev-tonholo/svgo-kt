@@ -7,6 +7,7 @@ kotlin-coroutines = "1.10.2"
 vanniktech-maven-publish = "0.36.0"
 kover = "0.9.1"
 dokka = "2.2.0"
+kotlinx-benchmark = "0.4.13"
 # svgo-kt's Maven coordinate version is composed from two halves:
 #   `<svgo-upstream>-<svgokt>` (e.g. `4.0.1-0.1.0`)
 #
@@ -32,6 +33,7 @@ kotlinx-coroutines-js = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-cor
 kotlinx-coroutines-jvm = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "kotlin-coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlin-coroutines" }
 xmlutil-core = { group = "io.github.pdvrieze.xmlutil", name = "core", version.ref = "xmlutil" }
+kotlinx-benchmark-runtime = { module = "org.jetbrains.kotlinx:kotlinx-benchmark-runtime", version.ref = "kotlinx-benchmark" }
 
 # Gradle plugin artifacts consumed as regular dependencies by `build-logic` so
 # that convention plugin scripts can apply them with a plain `plugins { ... }`
@@ -45,3 +47,4 @@ dokka-gradle-plugin = { module = "org.jetbrains.dokka:dokka-gradle-plugin", vers
 [plugins]
 org-jetbrains-kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 io-gitlab-arturbosch-detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+org-jetbrains-kotlinx-benchmark = { id = "org.jetbrains.kotlinx.benchmark", version.ref = "kotlinx-benchmark" }
