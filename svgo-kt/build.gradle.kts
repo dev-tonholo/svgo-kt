@@ -2,6 +2,7 @@ plugins {
     id("dev.tonholo.svgokt.conventions.kmp")
     id("dev.tonholo.svgokt.conventions.fixtures")
     id("dev.tonholo.svgokt.conventions.detekt")
+    id("dev.tonholo.svgokt.conventions.coverage")
     id("dev.tonholo.svgokt.conventions.publication")
 }
 

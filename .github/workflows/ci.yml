@@ -71,3 +71,30 @@ jobs:
           name: detekt-reports
           path: svgo-kt/build/reports/detekt/
           retention-days: 7
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: ./.github/actions/setup
+
+      - name: Run tests with coverage
+        run: ./gradlew :svgo-kt:koverXmlReport :svgo-kt:koverHtmlReport
+
+      - name: Upload Kover HTML report
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v4.6.2
+        with:
+          name: kover-html-report
+          path: svgo-kt/build/reports/kover/html/
+          retention-days: 14
+
+      - name: Upload Kover XML report
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v4.6.2
+        with:
+          name: kover-xml-report
+          path: svgo-kt/build/reports/kover/report.xml
+          retention-days: 14
+
+      - name: Verify coverage thresholds
+        run: ./gradlew :svgo-kt:koverVerify
