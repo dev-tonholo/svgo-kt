@@ -1,4 +1,10 @@
 # SVGO Kotlin
+
+[![CI](https://img.shields.io/github/actions/workflow/status/rafaeltonholo/svgo-kt/ci.yml?branch=main&label=CI&logo=github)](https://github.com/rafaeltonholo/svgo-kt/actions/workflows/ci.yml)
+[![Maven Central](https://img.shields.io/maven-central/v/dev.tonholo/svgo-kt?logo=apachemaven&label=Maven%20Central)](https://central.sonatype.com/artifact/dev.tonholo/svgo-kt)
+[![License: MIT](https://img.shields.io/github/license/rafaeltonholo/svgo-kt?label=License)](LICENSE)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.20-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/)
+
 This is an interpretation of the awesome tool [SVGO](https://github.com/svg/svgo), 
 written in Kotlin.
 
