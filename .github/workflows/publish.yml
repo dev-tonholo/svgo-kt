@@ -47,9 +47,17 @@ jobs:
         run: |
           set -euo pipefail
           tag="${PUBLISH_REF}"
-          catalog_version="$(grep -E '^svgokt\s*=' gradle/libs.versions.toml | sed -E 's/.*"([^"]+)".*/\1/')"
+          upstream="$(
+            grep -E '^svgo-upstream\s*=' gradle/libs.versions.toml \
+              | sed -E 's/.*"([^"]+)".*/\1/'
+          )"
+          own="$(
+            grep -E '^svgokt\s*=' gradle/libs.versions.toml \
+              | sed -E 's/.*"([^"]+)"[^"]*$/\1/'
+          )"
+          catalog_version="${upstream}-${own}"
           if [[ "$tag" != "$catalog_version" ]]; then
-            echo "::error::Tag '$tag' does not match the svgokt catalog version '$catalog_version'."
+            echo "::error::Tag '$tag' does not match the catalog version '$catalog_version' (svgo-upstream=$upstream, svgokt=$own)."
             echo "Update gradle/libs.versions.toml before tagging." >&2
             exit 1
           fi

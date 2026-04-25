@@ -5,9 +5,18 @@ kss = "1.0.3"
 xmlutil = "0.91.3"
 kotlin-coroutines = "1.10.2"
 vanniktech-maven-publish = "0.36.0"
-# Single source of truth for the svgo-kt Maven coordinate version. Format is
-# `<svgo-upstream>-<svgo-kt>` (e.g. 4.0.1-0.1.0), mirroring the KSP scheme.
-svgokt = "4.0.1-0.1.0"
+# svgo-kt's Maven coordinate version is composed from two halves:
+#   `<svgo-upstream>-<svgokt>` (e.g. `4.0.1-0.1.0`)
+#
+# - `svgo-upstream` tracks the upstream svgo release this artifact mirrors and
+#   is bumped manually when we sync against a new svgo version (driven by the
+#   Epic that the SVGO-upgrade workflow creates).
+# - `svgokt` is our own Kotlin-side semver, automatically bumped by
+#   release-please based on conventional commits. The trailing
+#   `# x-release-please-version` marker is what release-please's generic file
+#   updater scans for, so do not remove it.
+svgo-upstream = "4.0.1"
+svgokt = "0.1.0" # x-release-please-version
 
 [libraries]
 detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
