@@ -64,6 +64,7 @@ that targets one of:
   replacement for the npm `svgo` package. If you need `svgo` in a pure
   JavaScript/Node project, use the original
   [svgo](https://github.com/svg/svgo).
+- Kotlin/WasmJS — for KMP browser projects (Compose Web, etc.).
 - Kotlin/Native: `linuxX64`, `mingwX64`, `macosArm64`, `macosX64`
 
 # Versioning

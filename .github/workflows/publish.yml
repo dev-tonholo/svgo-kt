@@ -69,6 +69,9 @@ jobs:
       - name: JS (node) tests
         run: ./gradlew :svgo-kt:jsNodeTest
 
+      - name: WasmJS (node) tests
+        run: ./gradlew :svgo-kt:wasmJsNodeTest
+
       - name: Linux x64 native tests
         run: ./gradlew :svgo-kt:linuxX64Test
 

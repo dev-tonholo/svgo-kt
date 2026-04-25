@@ -31,5 +31,17 @@ kotlin {
         }
     }
 
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    wasmJs {
+        outputModuleName.set("svgo-wasm")
+        binaries.executable()
+        nodejs()
+        browser {
+            commonWebpackConfig {
+                outputFileName = "svgo-wasm.js"
+            }
+        }
+    }
+
     jvm()
 }

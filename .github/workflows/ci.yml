@@ -18,13 +18,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Ubuntu hosts the JVM, JS (node) and linuxX64 native targets.
-          # Running them all on a single Ubuntu runner is the cheapest way
-          # to cover the bulk of the test surface, including the full
-          # 363-fixture upstream parity suite (jvmTest).
+          # Ubuntu hosts the JVM, JS (node), WasmJS (node) and linuxX64
+          # native targets. Running them all on a single Ubuntu runner is
+          # the cheapest way to cover the bulk of the test surface,
+          # including the full 363-fixture upstream parity suite (jvmTest).
           - os: ubuntu-latest
-            label: Ubuntu (JVM, JS, linuxX64)
-            tasks: ":svgo-kt:assemble :svgo-kt:jvmTest :svgo-kt:jsNodeTest :svgo-kt:linuxX64Test"
+            label: Ubuntu (JVM, JS, WasmJS, linuxX64)
+            tasks: ":svgo-kt:assemble :svgo-kt:jvmTest :svgo-kt:jsNodeTest :svgo-kt:wasmJsNodeTest :svgo-kt:linuxX64Test"
           # macOS hosts the macosArm64 native target, which is the primary
           # Apple Silicon configuration for downstream consumers and the
           # one we develop against locally.
