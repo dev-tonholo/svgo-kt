@@ -111,16 +111,40 @@ upstream fixtures and is the canonical signal.
 
 ## Releases
 
-We follow the KSP-style compound version `<svgo-upstream>-<svgo-kt>` (e.g.
-`4.0.1-0.1.0`). The single source of truth is the `svgokt` entry in
-`gradle/libs.versions.toml`. To cut a release:
+We follow the KSP-style compound version `<svgo-upstream>-<svgokt>` (e.g.
+`4.0.1-0.1.0`). The two halves live as separate entries in
+`gradle/libs.versions.toml` and are bumped on different cadences:
 
-1. Bump `svgokt` in `gradle/libs.versions.toml`.
-2. Open a PR, merge to `main`.
-3. Tag the merge commit with the same version string
-   (`git tag 4.0.1-0.1.1 && git push --tags`).
-4. The `Publish` GitHub Actions workflow verifies the tag matches the
-   catalog, re-runs the test suite and publishes to Maven Central.
+- `svgo-upstream` -- the upstream svgo version we mirror. Bumped manually as
+  part of an SVGO upgrade (the daily upgrade-check workflow opens an Epic
+  with the full checklist when a new svgo lands on npm).
+- `svgokt` -- our own Kotlin-side semver. **Bumped automatically by
+  release-please** based on the conventional commits merged into `main`.
+
+### How a release happens
+
+1. Merge conventional-commit PRs into `main` as usual (`fix:`, `feat:`,
+   etc.). The commit type drives the next semver bump:
+   - `fix:` -> patch (`0.1.0` -> `0.1.1`)
+   - `feat:` -> minor (`0.1.0` -> `0.2.0`)
+   - `feat!:` / `BREAKING CHANGE:` -> major
+2. The `Release Please` workflow keeps a single open PR titled something
+   like *"chore(main): release 4.0.1-0.1.1"*. It updates `CHANGELOG.md`,
+   bumps the `svgokt` entry in `gradle/libs.versions.toml`, and refreshes
+   the `.release-please-manifest.json` snapshot.
+3. When you merge that PR, release-please creates a tag (e.g.
+   `4.0.1-0.1.1`) and a GitHub Release with the generated changelog as the
+   body.
+4. The `Publish` workflow fires on `release: published`, verifies the tag
+   against the catalog, re-runs JVM/JS/linuxX64 tests, and publishes to
+   Maven Central + GitHub Packages.
+
+### Releasing after an SVGO upgrade
+
+When the SVGO upgrade Epic ships, the same PR that bumps `svgo-upstream`
+must also update `package-name` in `release-please-config.json` (it is the
+prefix used to construct release tags). The next release-please PR will
+then tag as `<new-svgo>-<svgokt>`.
 
 ## Code of conduct
 

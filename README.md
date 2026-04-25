@@ -74,6 +74,12 @@ The upstream SVGO version leads so consumers can see at a glance which SVGO
 release a given artifact targets. Our own semver increments independently for
 bug fixes, features, and breaking API changes on the Kotlin side.
 
+The two halves live as separate entries in `gradle/libs.versions.toml`
+(`svgo-upstream` and `svgokt`). The right half is automatically bumped by
+[release-please](https://github.com/googleapis/release-please) based on
+conventional commits (`fix:`, `feat:`, `feat!:`); the left half is bumped
+manually when we sync against a new upstream svgo release.
+
 # Installation
 svgo-kt is published to Maven Central under `dev.tonholo:svgo-kt`.
 

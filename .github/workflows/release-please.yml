@@ -1,0 +1,40 @@
+name: Release Please
+
+# Watches `main` for conventional-commit merges and maintains a single open
+# release PR that bumps the `svgokt` (right-hand) half of our compound
+# version, regenerates `CHANGELOG.md`, and -- once merged -- creates the
+# corresponding GitHub Release and tag.
+#
+# The tag format is driven by `release-please-config.json`:
+#   `<package-name><tag-separator><version>` -> `4.0.1-0.1.1`
+# Where `package-name` is the upstream svgo version we currently mirror.
+# When the SVGO upgrade Epic is finished, both `svgo-upstream` in
+# `gradle/libs.versions.toml` AND `package-name` in
+# `release-please-config.json` are bumped in the same PR so the next release
+# tag picks up the new prefix automatically.
+#
+# After release-please cuts the tag + GitHub Release, the existing
+# `publish.yml` workflow fires on `release: published` and ships the
+# artifacts to Maven Central and GitHub Packages.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Maintain release PR / cut release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@a02a34c4d625f9be7cb89156071d8567266a2445 # v4.1.3
+        with:
+          target-branch: main
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
