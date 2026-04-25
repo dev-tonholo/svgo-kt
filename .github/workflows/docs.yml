@@ -1,0 +1,54 @@
+name: Docs
+
+# Builds the Dokka API site for `:svgo-kt` and publishes it to GitHub
+# Pages on every push to `main`. Pull requests build the site as a
+# preview but don't deploy, so doc regressions still fail CI without
+# stomping the live site.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  # GitHub Pages only allows one in-flight deployment at a time. Don't
+  # cancel the in-progress publish if another commit lands quickly --
+  # let it finish so the eventually-published site is consistent.
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Dokka site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: ./.github/actions/setup
+
+      - name: Build Dokka site
+        run: ./gradlew :svgo-kt:dokkaGenerate
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          path: svgo-kt/build/dokka/html
+
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    # Don't deploy from PR runs -- only from `main`.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

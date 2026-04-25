@@ -6,6 +6,7 @@ xmlutil = "0.91.3"
 kotlin-coroutines = "1.10.2"
 vanniktech-maven-publish = "0.36.0"
 kover = "0.9.1"
+dokka = "2.2.0"
 # svgo-kt's Maven coordinate version is composed from two halves:
 #   `<svgo-upstream>-<svgokt>` (e.g. `4.0.1-0.1.0`)
 #
@@ -39,6 +40,7 @@ kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", v
 detekt-gradle-plugin = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detekt" }
 vanniktech-maven-publish-plugin = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "vanniktech-maven-publish" }
 kover-gradle-plugin = { module = "org.jetbrains.kotlinx:kover-gradle-plugin", version.ref = "kover" }
+dokka-gradle-plugin = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version.ref = "dokka" }
 
 [plugins]
 org-jetbrains-kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

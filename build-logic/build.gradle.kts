@@ -21,4 +21,5 @@ dependencies {
     implementation(libs.detekt.gradle.plugin)
     implementation(libs.vanniktech.maven.publish.plugin)
     implementation(libs.kover.gradle.plugin)
+    implementation(libs.dokka.gradle.plugin)
 }
