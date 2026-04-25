@@ -1,0 +1,53 @@
+name: CodeQL
+
+# GitHub-hosted static analysis. Runs on every push to `main` and pull
+# request, plus a weekly cron so newly disclosed query packs catch
+# previously-clean code without waiting for the next push.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Saturday 06:00 UTC -- low traffic, before the weekly review window.
+    - cron: '0 6 * * 6'
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # CodeQL groups Kotlin under `java-kotlin`; that single matrix
+        # entry covers every JVM-bound source set in svgo-kt. Native /
+        # JS / WasmJS sources are not currently analyzable by CodeQL,
+        # so they fall outside this workflow's scope.
+        language: ["java-kotlin"]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: ./.github/actions/setup
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@4e828ff8d448a8a6e532957b1811f387a63867e8 # v3.30.4
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-and-quality
+
+      - name: Build (Kotlin/JVM only -- what CodeQL indexes)
+        run: ./gradlew :svgo-kt:compileKotlinJvm :svgo-kt:compileTestKotlinJvm
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@4e828ff8d448a8a6e532957b1811f387a63867e8 # v3.30.4
+        with:
+          category: "/language:${{ matrix.language }}"
