@@ -3,20 +3,33 @@
 /*
  * bench-and-compare.mjs
  *
- * Reads the JMH-formatted JSON results emitted by `:benchmarks:benchmark`
- * (svgo-kt JVM, kotlinx-benchmark output), times upstream svgo on the same
- * payloads from disk, and prints a side-by-side table with the ratio so
- * you can see at a glance how svgo-kt's pipeline compares to the
- * Node-native reference implementation on equivalent inputs.
+ * Reads one or more kotlinx-benchmark JSON reports (one per svgo-kt
+ * target the host was able to run, e.g. `jvm.json`, `macosArm64.json`),
+ * times upstream svgo on the same on-disk payloads, and prints a
+ * side-by-side table with one column per svgo-kt target plus the
+ * svgo-kt-to-svgo ratio so you can see at a glance how each runtime
+ * stacks up against the Node-native reference implementation.
+ *
+ * Optionally also accepts JMH `-prof gc` reports (JVM only) via
+ * `--gc <target>=<json-path>` and prints a per-payload allocation
+ * summary so allocation-heavy hot paths surface alongside the timing
+ * table.
  *
  * Usage:
- *   node bench-and-compare.mjs <jmh-json-path> [payload-dir]
+ *   node bench-and-compare.mjs [--payload-dir <dir>] \
+ *        [--gc <target>=<json-path>...] \
+ *        <target>=<json-path> [<target>=<json-path>...]
  *
- *   <jmh-json-path>   path to the JSON report under
- *                     `benchmarks/build/reports/benchmarks/main/...`
- *   [payload-dir]     directory containing tiny.svg / small.svg /
- *                     medium.svg, defaults to
- *                     `benchmarks/build/generated/payloads/`
+ *   <target>=<json-path>   one or more kotlinx-benchmark JSON reports,
+ *                          where <target> is the column label
+ *                          (typically the KMP target name, e.g. `jvm`
+ *                          or `macosArm64`) and <json-path> is the
+ *                          path to that target's report.
+ *   --payload-dir <dir>    directory containing tiny.svg / small.svg /
+ *                          medium.svg, defaults to
+ *                          `benchmarks/build/generated/payloads/`.
+ *   --gc <target>=<json>   JMH `-prof gc` report; can repeat. Adds an
+ *                          allocation summary table for those targets.
  */
 
 import { readFile } from 'node:fs/promises';
@@ -33,22 +46,99 @@ const NODE_MEASURED_ITERATIONS = 1000;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 async function main() {
-    const [jmhJsonArg, payloadDirArg] = process.argv.slice(2);
-    if (!jmhJsonArg) {
-        console.error('Usage: bench-and-compare.mjs <jmh-json-path> [payload-dir]');
+    const { reports, gcReports, payloadDir } = parseArgs(process.argv.slice(2));
+    if (reports.length === 0) {
+        console.error(
+            'Usage: bench-and-compare.mjs [--payload-dir <dir>] ' +
+            '[--gc <target>=<json-path>...] ' +
+            '<target>=<json-path> [<target>=<json-path>...]'
+        );
         process.exit(1);
     }
-    const jmhJsonPath = resolve(jmhJsonArg);
-    const payloadDir = payloadDirArg
-        ? resolve(payloadDirArg)
-        : resolve(__dirname, '..', 'build', 'generated', 'payloads');
 
-    const jvmResults = await loadJmhResults(jmhJsonPath);
+    /** @type {Array<{target: string, results: Map<string, {score: number, error: number}>}>} */
+    const svgoKtResults = [];
+    for (const { target, path } of reports) {
+        svgoKtResults.push({
+            target,
+            results: await loadJmhResults(path),
+        });
+    }
+
+    /** @type {Array<{target: string, results: Map<string, {allocPerOp: number, allocRate: number, gcCount: number, gcTimeMs: number}>}>} */
+    const gcResults = [];
+    for (const { target, path } of gcReports) {
+        gcResults.push({
+            target,
+            results: await loadJmhGcResults(path),
+        });
+    }
+
     const nodeResults = await runNodeBenchmarks(payloadDir);
 
-    printTable(jvmResults, nodeResults);
+    printTable(svgoKtResults, nodeResults);
+    if (gcResults.length > 0) {
+        printGcTable(gcResults);
+    }
 }
 
+/**
+ * @param {string[]} argv
+ * @returns {{
+ *   reports: Array<{target: string, path: string}>,
+ *   gcReports: Array<{target: string, path: string}>,
+ *   payloadDir: string,
+ * }}
+ */
+function parseArgs(argv) {
+    /** @type {Array<{target: string, path: string}>} */
+    const reports = [];
+    /** @type {Array<{target: string, path: string}>} */
+    const gcReports = [];
+    let payloadDir = resolve(__dirname, '..', 'build', 'generated', 'payloads');
+
+    for (let i = 0; i < argv.length; i++) {
+        const arg = argv[i];
+        if (arg === '--payload-dir') {
+            const value = argv[++i];
+            if (!value) {
+                throw new Error('--payload-dir requires a directory argument');
+            }
+            payloadDir = resolve(value);
+            continue;
+        }
+        if (arg === '--gc') {
+            const value = argv[++i];
+            if (!value) {
+                throw new Error('--gc requires <target>=<json-path>');
+            }
+            gcReports.push(parseTargetEqPath(value, '--gc'));
+            continue;
+        }
+
+        reports.push(parseTargetEqPath(arg, '<target>=<json-path>'));
+    }
+
+    return { reports, gcReports, payloadDir };
+}
+
+/**
+ * @param {string} arg
+ * @param {string} expected
+ * @returns {{target: string, path: string}}
+ */
+function parseTargetEqPath(arg, expected) {
+    const eq = arg.indexOf('=');
+    if (eq <= 0) {
+        throw new Error(`Expected ${expected}, got: ${arg}.`);
+    }
+    return {
+        target: arg.slice(0, eq),
+        path: resolve(arg.slice(eq + 1)),
+    };
+}
+
+/** @param {string} path */
 async function loadJmhResults(path) {
     const raw = await readFile(path, 'utf8');
     /** @type {Array<{benchmark: string, mode: string, params: {payload?: string}, primaryMetric: {score: number, scoreError: number, scoreUnit: string}}>} */
@@ -66,6 +156,32 @@ async function loadJmhResults(path) {
     return byPayload;
 }
 
+/**
+ * Loads `-prof gc` secondary metrics keyed by payload.
+ * @param {string} path
+ * @returns {Promise<Map<string, {allocPerOp: number, allocRate: number, gcCount: number, gcTimeMs: number}>>}
+ */
+async function loadJmhGcResults(path) {
+    const raw = await readFile(path, 'utf8');
+    /** @type {Array<{params: {payload?: string}, secondaryMetrics: Record<string, {score: number}>}>} */
+    const entries = JSON.parse(raw);
+    /** @type {Map<string, {allocPerOp: number, allocRate: number, gcCount: number, gcTimeMs: number}>} */
+    const byPayload = new Map();
+    for (const entry of entries) {
+        const payload = entry.params?.payload;
+        if (!payload) continue;
+        const sm = entry.secondaryMetrics ?? {};
+        byPayload.set(payload, {
+            allocPerOp: sm['·gc.alloc.rate.norm']?.score ?? NaN,
+            allocRate: sm['·gc.alloc.rate']?.score ?? NaN,
+            gcCount: sm['·gc.count']?.score ?? NaN,
+            gcTimeMs: sm['·gc.time']?.score ?? NaN,
+        });
+    }
+    return byPayload;
+}
+
+/** @param {string} payloadDir */
 async function runNodeBenchmarks(payloadDir) {
     /** @type {Map<string, {score: number, error: number}>} */
     const byPayload = new Map();
@@ -114,41 +230,96 @@ function statistics(samples) {
     return { score: mean, error };
 }
 
-function printTable(jvm, node) {
-    const rows = PAYLOAD_NAMES.map((name) => {
-        const jvmEntry = jvm.get(name);
-        const nodeEntry = node.get(name);
-        return {
-            payload: name,
-            svgoKt: jvmEntry,
-            svgo: nodeEntry,
-            ratio: jvmEntry && nodeEntry ? jvmEntry.score / nodeEntry.score : NaN,
-        };
-    });
-
-    const cols = [
-        { header: 'Payload', width: 8, align: 'left' },
-        { header: 'svgo-kt JVM (ms/op)', width: 22, align: 'right' },
-        { header: 'svgo (Node, ms/op)', width: 22, align: 'right' },
-        { header: 'svgo-kt / svgo', width: 16, align: 'right' },
-    ];
+/**
+ * @param {Array<{target: string, results: Map<string, {score: number, error: number}>}>} svgoKtResults
+ * @param {Map<string, {score: number, error: number}>} node
+ */
+function printTable(svgoKtResults, node) {
+    /** @type {Array<{header: string, width: number, align: 'left' | 'right'}>} */
+    const cols = [{ header: 'Payload', width: 8, align: 'left' }];
+    for (const { target } of svgoKtResults) {
+        cols.push({
+            header: `svgo-kt ${target} (ms/op)`,
+            width: Math.max(22, `svgo-kt ${target} (ms/op)`.length),
+            align: 'right',
+        });
+    }
+    cols.push({ header: 'svgo (Node, ms/op)', width: 22, align: 'right' });
+    for (const { target } of svgoKtResults) {
+        const header = `${target} / svgo`;
+        cols.push({
+            header,
+            width: Math.max(16, header.length),
+            align: 'right',
+        });
+    }
 
     const sep = cols.map((c) => '-'.repeat(c.width)).join(' | ');
     console.log();
     console.log(cols.map((c) => pad(c.header, c.width, c.align)).join(' | '));
     console.log(sep);
-    for (const row of rows) {
-        const cells = [
-            pad(row.payload, cols[0].width, 'left'),
-            pad(formatScore(row.svgoKt), cols[1].width, 'right'),
-            pad(formatScore(row.svgo), cols[2].width, 'right'),
-            pad(formatRatio(row.ratio), cols[3].width, 'right'),
-        ];
+
+    for (const name of PAYLOAD_NAMES) {
+        const nodeEntry = node.get(name);
+        const cells = [pad(name, cols[0].width, 'left')];
+        let colIdx = 1;
+        const ktEntries = svgoKtResults.map(({ results }) => results.get(name));
+        for (const entry of ktEntries) {
+            cells.push(pad(formatScore(entry), cols[colIdx].width, 'right'));
+            colIdx++;
+        }
+        cells.push(pad(formatScore(nodeEntry), cols[colIdx].width, 'right'));
+        colIdx++;
+        for (const entry of ktEntries) {
+            const ratio = entry && nodeEntry ? entry.score / nodeEntry.score : NaN;
+            cells.push(pad(formatRatio(ratio), cols[colIdx].width, 'right'));
+            colIdx++;
+        }
         console.log(cells.join(' | '));
     }
     console.log();
     console.log('  ratio < 1.0  -> svgo-kt is faster than upstream svgo on this payload');
     console.log('  ratio > 1.0  -> svgo-kt is slower than upstream svgo on this payload');
+    console.log();
+}
+
+/**
+ * @param {Array<{target: string, results: Map<string, {allocPerOp: number, allocRate: number, gcCount: number, gcTimeMs: number}>}>} gcResults
+ */
+function printGcTable(gcResults) {
+    /** @type {Array<{header: string, width: number, align: 'left' | 'right'}>} */
+    const cols = [
+        { header: 'Payload', width: 8, align: 'left' },
+        { header: 'Target', width: 12, align: 'left' },
+        { header: 'Alloc/op (KB)', width: 14, align: 'right' },
+        { header: 'Alloc rate (MB/s)', width: 18, align: 'right' },
+        { header: 'GC count', width: 10, align: 'right' },
+        { header: 'GC time (ms)', width: 13, align: 'right' },
+    ];
+
+    const sep = cols.map((c) => '-'.repeat(c.width)).join(' | ');
+    console.log('JVM allocation profile (JMH -prof gc)');
+    console.log();
+    console.log(cols.map((c) => pad(c.header, c.width, c.align)).join(' | '));
+    console.log(sep);
+
+    for (const name of PAYLOAD_NAMES) {
+        for (const { target, results } of gcResults) {
+            const m = results.get(name);
+            const row = [
+                pad(name, cols[0].width, 'left'),
+                pad(target, cols[1].width, 'left'),
+                pad(m ? (m.allocPerOp / 1024).toFixed(2) : 'n/a', cols[2].width, 'right'),
+                pad(m ? m.allocRate.toFixed(1) : 'n/a', cols[3].width, 'right'),
+                pad(m ? m.gcCount.toFixed(0) : 'n/a', cols[4].width, 'right'),
+                pad(m ? m.gcTimeMs.toFixed(0) : 'n/a', cols[5].width, 'right'),
+            ];
+            console.log(row.join(' | '));
+        }
+    }
+    console.log();
+    console.log('  Alloc/op = bytes allocated per optimize() call (gc.alloc.rate.norm).');
+    console.log('  High alloc/op vs input size flags allocation-heavy hot paths.');
     console.log();
 }
 
