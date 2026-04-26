@@ -1,7 +1,8 @@
 # svgo-kt benchmarks
 
 JMH-based microbenchmarks for `svgo-kt`'s `optimize()` pipeline, plus a
-helper script for comparing against the upstream Node.js `svgo` package.
+helper script for comparing against the upstream Node.js `svgo` package
+on byte-identical payloads.
 
 ## What's measured
 
@@ -19,6 +20,12 @@ Mode is **average time** (`avgt`) reported in milliseconds per
 operation. Each configuration warms up before measurement so JIT
 optimization is in steady state.
 
+The three payloads are generated from a single Kotlin source of truth in
+`build.gradle.kts` (the `generateBenchmarkPayloads` task) into
+`build/generated/resources/payloads/`, then reused as both the Kotlin
+benchmark's classpath resources and the Node comparison script's
+filesystem inputs -- so both sides run on byte-identical bytes.
+
 ## Running
 
 ```bash
@@ -35,9 +42,9 @@ Local snapshot on an Apple Silicon laptop (`avgt`, ms/op):
 
 | Payload | svgo-kt JVM |
 |---------|-------------|
-| tiny    | ~0.25 ms    |
-| small   | ~3.1 ms     |
-| medium  | ~39 ms      |
+| tiny    | ~0.16 ms    |
+| small   | ~2.5 ms     |
+| medium  | ~38 ms      |
 
 ## Comparing against upstream svgo
 
@@ -46,32 +53,38 @@ terms -- different runtimes (JVM vs. V8), different startup costs,
 different GC characteristics. The *ratio* on the same payload is what's
 informative for tracking regressions over time.
 
-### Quick comparison via Node.js
+### `compare-bench.sh` -- one command, full report
 
 ```bash
-node --experimental-vm-modules - <<'EOF'
-import { optimize } from 'svgo';
-import { performance } from 'perf_hooks';
-
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-</svg>`;
-
-const N = 1000;
-// warmup
-for (let i = 0; i < 100; i++) optimize(svg);
-
-const t0 = performance.now();
-for (let i = 0; i < N; i++) optimize(svg);
-const dt = (performance.now() - t0) / N;
-console.log(`upstream svgo (tiny): ${dt.toFixed(3)} ms/op`);
-EOF
+./benchmarks/scripts/compare-bench.sh
 ```
 
-Drop in larger payloads to mirror the `small` / `medium` shapes; the
-Kotlin source for those is in
-[`SvgoOptimizeBenchmark.kt`](src/jvmMain/kotlin/svgokt/benchmarks/SvgoOptimizeBenchmark.kt)
-and is straight-forward to translate.
+That script:
+
+1. Generates the shared payload files (`generateBenchmarkPayloads`).
+2. Runs the full svgo-kt JVM benchmark (`./gradlew :benchmarks:benchmark`).
+3. `npm install`s upstream `svgo@4.0.1` under `benchmarks/scripts/` if
+   it's not already there.
+4. Reads the freshest svgo-kt JMH JSON report.
+5. Times upstream svgo on the same payload files via `perf_hooks` (200
+   warmup + 1000 measured iterations per payload, with a 99.9 %
+   confidence interval).
+6. Prints a side-by-side table like:
+
+   ```
+   Payload  |    svgo-kt JVM (ms/op) |     svgo (Node, ms/op) |   svgo-kt / svgo
+   -------- | ---------------------- | ---------------------- | ----------------
+   tiny     |          0.157 ± 0.018 |          0.051 ± 0.006 |            3.06x
+   small    |          2.468 ± 0.248 |          0.878 ± 0.016 |            2.81x
+   medium   |         37.699 ± 1.463 |          6.006 ± 0.153 |            6.28x
+   ```
+
+   `ratio < 1.0` -> svgo-kt is faster than upstream on that payload;
+   `> 1.0` -> slower.
+
+Requirements: JDK 17+ (already needed for the rest of the project),
+Node.js 22+ (ESM imports + `Float64Array`), and `npm` for the local
+svgo install.
 
 ### Notes on interpreting the results
 
@@ -81,7 +94,7 @@ and is straight-forward to translate.
 - **GC noise.** Both runtimes pause occasionally. Bigger N and more
   iterations smooth this out; the JMH harness in this module already
   uses 5 iterations of 2 seconds in the default `benchmark`
-  configuration.
+  configuration, and the Node side runs 1000 iterations per payload.
 - **Warmup matters.** The JVM JIT inlines the plugin pipeline once the
   benchmark has run a few thousand times; the first few iterations
   will look much slower.
@@ -89,3 +102,6 @@ and is straight-forward to translate.
   to `preset-default`, which is exactly what `svgo {}` (empty config)
   applies in svgo-kt. Don't compare `preset-default` against a
   hand-tuned plugin list -- the time profile is materially different.
+- **Confidence intervals.** Both sides print `score ± error` at 99.9 %
+  confidence. A change is real only if the new score sits outside the
+  old score's interval and the new interval doesn't overlap the old.

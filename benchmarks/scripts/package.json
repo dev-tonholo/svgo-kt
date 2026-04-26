@@ -1,0 +1,10 @@
+{
+  "name": "svgo-kt-benchmarks-scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Node.js helpers for comparing svgo-kt against upstream svgo on the same payloads. Not published.",
+  "dependencies": {
+    "svgo": "4.0.1"
+  }
+}
