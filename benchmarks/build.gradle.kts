@@ -1,61 +1,136 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
+
 plugins {
     alias(libs.plugins.org.jetbrains.kotlin.multiplatform)
     alias(libs.plugins.org.jetbrains.kotlinx.benchmark)
 }
 
-// Generates the three benchmark SVG payloads (`tiny`, `small`, `medium`) from
-// a single source of truth, so both the Kotlin benchmark (loads via
-// classpath) and the Node-side comparison script (reads from disk) hit
-// byte-identical inputs and the comparison stays apples-to-apples.
+// The benchmark module exposes the same payloads to two consumers:
+//   1. The Kotlin benchmark (every KMP target), via a generated commonMain
+//      Kotlin object so payloads are available without per-target resource
+//      I/O and we don't need `expect/actual` shims for `getResourceAsStream`,
+//      `require()`, `Deno.readFile`, etc.
+//   2. The Node.js comparison script under `scripts/`, which reads the
+//      `.svg` files from disk so it can feed identical bytes to upstream
+//      svgo.
 //
-// The files are emitted under `build/generated/resources/payloads/` so we
-// can register the parent `resources/` directory as a Kotlin resource root
-// and have the contents land at `classpath:payloads/<name>.svg`.
-val generatedResourcesDir = layout.buildDirectory.dir("generated/resources")
-val generatedPayloadsDir = generatedResourcesDir.map { it.dir("payloads") }
+// Both outputs are produced from the same Kotlin builders below so the
+// inputs stay byte-identical and the comparison stays apples-to-apples.
+val generatedSourcesDir = layout.buildDirectory.dir("generated/sources/payloads/kotlin")
+val generatedPayloadsDir = layout.buildDirectory.dir("generated/payloads")
 
 val generateBenchmarkPayloads = tasks.register("generateBenchmarkPayloads") {
     group = "build"
-    description = "Writes the tiny/small/medium benchmark SVG payloads to a single, " +
-        "shared directory consumed by both the Kotlin benchmark and the Node comparison " +
-        "script."
-    val outputDir = generatedPayloadsDir
-    outputs.dir(outputDir).withPropertyName("outputDir")
+    description = "Writes the tiny/small/medium benchmark SVG payloads as both a " +
+        "commonMain Kotlin object (for every KMP target) and on-disk .svg files " +
+        "(for the Node comparison script)."
+    val sourcesOut = generatedSourcesDir
+    val payloadsOut = generatedPayloadsDir
+    outputs.dir(sourcesOut).withPropertyName("sourcesOut")
+    outputs.dir(payloadsOut).withPropertyName("payloadsOut")
 
-    @Suppress("MagicNumber")
     doLast {
-        val target = outputDir.get().asFile
-        target.mkdirs()
-        target.resolve("tiny.svg").writeText(buildTinySvg())
-        target.resolve("small.svg").writeText(buildSmallSvg())
-        target.resolve("medium.svg").writeText(buildMediumSvg())
+        val payloads = mapOf(
+            "tiny" to buildTinySvg(),
+            "small" to buildSmallSvg(),
+            "medium" to buildMediumSvg(),
+        )
+
+        val payloadsDir = payloadsOut.get().asFile.apply { mkdirs() }
+        payloads.forEach { (name, svg) ->
+            payloadsDir.resolve("$name.svg").writeText(svg)
+        }
+
+        val sourcesDir = sourcesOut.get().asFile
+            .resolve("svgokt/benchmarks")
+            .apply { mkdirs() }
+        sourcesDir.resolve("BenchmarkPayloads.kt").writeText(
+            buildPayloadsKotlinSource(payloads),
+        )
     }
 }
 
+// `Svgo.optimize` is `suspend`, and the kotlinx-benchmark generators on
+// every target currently expect non-suspend benchmark methods (JMH on
+// the JVM rejects the synthetic `Continuation` parameter outright; the
+// JS/Wasm/Native generators pass a non-suspend function reference into
+// the generated descriptor). The pragmatic workaround is a
+// `runBlocking`-based bench, which is only available on JVM and Native.
+//
+// JS and Wasm therefore can't host the kotlinx-benchmark harness for
+// this library: there is no `runBlocking` on those targets, and the
+// optimize pipeline schedules work on `Dispatchers.Default` so it
+// cannot be driven synchronously from a non-suspending benchmark
+// method. The Node-side `bench-and-compare.mjs` script under
+// `scripts/` covers the JS-runtime comparison against upstream svgo
+// instead.
 kotlin {
     jvm()
+    macosArm64()
+    macosX64()
+    linuxX64()
+    mingwX64()
 
+    // The JVM and every Native target share a single `runBlocking`-based
+    // benchmark source set. The intermediate `blockingMain` lives under
+    // `src/blockingMain/` and depends on `commonMain` for the generated
+    // `BenchmarkPayloads` object.
     sourceSets {
-        commonMain.dependencies {
-            implementation(projects.svgoKt)
-            implementation(libs.kotlinx.benchmark.runtime)
-            implementation(libs.kotlinx.coroutines.core)
+        val commonMain by getting {
+            kotlin.srcDir(generatedSourcesDir)
+            dependencies {
+                implementation(projects.svgoKt)
+                implementation(libs.kotlinx.benchmark.runtime)
+                implementation(libs.kotlinx.coroutines.core)
+            }
         }
-        jvmMain {
-            // Surface the generated payloads on the runtime classpath so
-            // SvgoOptimizeBenchmark can load them via `getResourceAsStream`
-            // at `classpath:payloads/<name>.svg`.
-            resources.srcDir(generatedResourcesDir)
-        }
+        val blockingMain by creating { dependsOn(commonMain) }
+
+        val jvmMain by getting { dependsOn(blockingMain) }
+        val macosArm64Main by getting { dependsOn(blockingMain) }
+        val macosX64Main by getting { dependsOn(blockingMain) }
+        val linuxX64Main by getting { dependsOn(blockingMain) }
+        val mingwX64Main by getting { dependsOn(blockingMain) }
     }
 }
 
-// The Kotlin Multiplatform plugin wires the JVM source set's resources via
-// the `jvmProcessResources` task; that copy step must wait until the
-// payloads have been generated, otherwise it observes an empty (or stale)
-// `build/generated/payloads/` directory.
-tasks.named("jvmProcessResources") {
+// Every Kotlin compilation in this module reads from the generated source
+// directory, so make sure the generator has run before any of them start.
+tasks.withType<KotlinCompilationTask<*>>().configureEach {
     dependsOn(generateBenchmarkPayloads)
+}
+
+benchmark {
+    targets {
+        register("jvm")
+        register("macosArm64")
+        register("macosX64")
+        register("linuxX64")
+        register("mingwX64")
+    }
+
+    configurations {
+        named("main") {
+            warmups = 3
+            iterations = 5
+            iterationTime = 2
+            iterationTimeUnit = "s"
+            outputTimeUnit = "ms"
+            mode = "avgt"
+            reportFormat = "json"
+        }
+
+        // A faster sanity-check configuration for local iteration.
+        register("smoke") {
+            warmups = 1
+            iterations = 2
+            iterationTime = 1
+            iterationTimeUnit = "s"
+            outputTimeUnit = "ms"
+            mode = "avgt"
+            reportFormat = "text"
+        }
+    }
 }
 
 @Suppress("MagicNumber", "MaxLineLength")
@@ -121,31 +196,39 @@ fun buildMediumSvg(): String = buildString {
     appendLine("""</svg>""")
 }
 
-benchmark {
-    targets {
-        register("jvm")
+// Emits a generated Kotlin object whose `get(name)` returns the same
+// payload bytes the on-disk `.svg` files contain. Strings are encoded as
+// raw triple-quoted literals with `${'$'}` escapes so embedded `$` and
+// quote characters survive intact across every KMP target.
+fun buildPayloadsKotlinSource(payloads: Map<String, String>): String = buildString {
+    appendLine("// Generated by `:benchmarks:generateBenchmarkPayloads`. Do not edit by hand.")
+    appendLine("@file:Suppress(\"MaxLineLength\", \"MaximumLineLength\", \"LongMethod\", \"UndocumentedPublicClass\", \"UndocumentedPublicFunction\")")
+    appendLine()
+    appendLine("package svgokt.benchmarks")
+    appendLine()
+    appendLine("internal object BenchmarkPayloads {")
+    appendLine("    fun get(name: String): String = when (name) {")
+    payloads.keys.forEach { name ->
+        appendLine("        \"$name\" -> $name")
     }
-
-    configurations {
-        named("main") {
-            warmups = 3
-            iterations = 5
-            iterationTime = 2
-            iterationTimeUnit = "s"
-            outputTimeUnit = "ms"
-            mode = "avgt"
-            reportFormat = "json"
-        }
-
-        // A faster sanity-check configuration for local iteration.
-        register("smoke") {
-            warmups = 1
-            iterations = 2
-            iterationTime = 1
-            iterationTimeUnit = "s"
-            outputTimeUnit = "ms"
-            mode = "avgt"
-            reportFormat = "text"
-        }
+    appendLine("        else -> error(\"Unknown benchmark payload: \$name\")")
+    appendLine("    }")
+    appendLine()
+    payloads.forEach { (name, svg) ->
+        appendLine("    private val $name: String =")
+        appendLine("        ${kotlinRawStringLiteral(svg)}")
+        appendLine()
     }
+    appendLine("}")
+}
+
+// Encode an arbitrary string as a Kotlin raw triple-quoted literal that
+// reproduces the input exactly. Triple quotes inside the payload are
+// escaped via `${'"'}${'"'}${'"'}` and `$` characters via `${'$'}` so the
+// emitted Kotlin compiles cleanly even when the payload contains either.
+fun kotlinRawStringLiteral(value: String): String {
+    val escaped = value
+        .replace("\$", "\${'\$'}")
+        .replace("\"\"\"", "\${'\"'}\${'\"'}\${'\"'}")
+    return "\"\"\"$escaped\"\"\""
 }
