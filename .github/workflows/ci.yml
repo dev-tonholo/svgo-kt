@@ -38,6 +38,8 @@ jobs:
             tasks: ":svgo-kt:mingwX64Test"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: true
       - uses: ./.github/actions/setup
 
       - name: Run tests
@@ -77,6 +79,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: true
       - uses: ./.github/actions/setup
 
       - name: Run tests with coverage
