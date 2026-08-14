@@ -1,8 +1,29 @@
-<?xml version="1.0" ?>
+<?xml version='1.0' encoding='UTF-8'?>
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>CommentWrapping:SaxParser.kt$SaxParser$/*parser.*/</ID>
+    <ID>ComplexCondition:ConvertPathData.kt$ConvertPathData.Companion$( command == 'l' || command == 'h' || command == 'v' || command == 'q' || command == 't' || command == 'c' || command == 's' ) &amp;&amp; data.all { it == 0.0 }</ID>
+    <ID>ComplexCondition:ConvertPathData.kt$ConvertPathData.Companion$( prev.command == 'c' &amp;&amp; isConvex(prev.args) &amp;&amp; isArcPrev(prev.args, circle, arcThreshold, arcTolerance, error) ) || ( prev.command == 'a' &amp;&amp; prev.sdata != null &amp;&amp; isArcPrev(requireNotNull(prev.sdata), circle, arcThreshold, arcTolerance, error) )</ID>
+    <ID>ComplexCondition:ConvertPathData.kt$ConvertPathData.Companion$(command == 'Z' || command == 'z') &amp;&amp; params.removeUseless &amp;&amp; isSafeToUseZ &amp;&amp; itemBase != null &amp;&amp; itemCoords != null</ID>
+    <ID>ComplexCondition:ConvertPathData.kt$ConvertPathData.Companion$params.collapseRepeated &amp;&amp; !hasMarkerMid &amp;&amp; (command == 'm' || command == 'h' || command == 'v') &amp;&amp; prev.command.lowercaseChar() == command &amp;&amp; ( (command != 'h' &amp;&amp; command != 'v') || (prev.args[0] >= 0) == (data[0] >= 0) )</ID>
+    <ID>ComplexCondition:ConvertPathData.kt$ConvertPathData.Companion$params.convertToZ &amp;&amp; (isSafeToUseZ || next?.command == 'Z' || next?.command == 'z') &amp;&amp; (command == 'l' || command == 'h' || command == 'v') &amp;&amp; itemCoords != null</ID>
+    <ID>ComplexCondition:ConvertPathData.kt$ConvertPathData.Companion$params.forceAbsolutePath || ( absoluteStr.length &lt; relativeStr.length &amp;&amp; !( params.negativeExtraSpace &amp;&amp; command == prev.command &amp;&amp; prev.command.code > 96 &amp;&amp; absoluteStr.length == relativeStr.length - 1 &amp;&amp; ( data[0] &lt; 0 || ( kotlin.math.floor(data[0]) == 0.0 &amp;&amp; data[0] % 1.0 != 0.0 &amp;&amp; prev.args[prev.args.size - 1] % 1.0 != 0.0 ) ) ) )</ID>
+    <ID>ComplexCondition:ConvertTransform.kt$params.shortRotate &amp;&amp; i >= 2 &amp;&amp; transforms[i - 2].name == "translate" &amp;&amp; transforms[i - 1].name == "rotate" &amp;&amp; transforms[i].name == "translate" &amp;&amp; transforms[i - 2].data[0] == -transforms[i].data[0] &amp;&amp; transforms[i - 2].data.getOrElse(index = 1) { 0.0 } == -transforms[i].data.getOrElse(index = 1) { 0.0 }</ID>
+    <ID>ComplexCondition:Intersects.kt$points1.maxX &lt;= points2.minX || points2.maxX &lt;= points1.minX || points1.maxY &lt;= points2.minY || points2.maxY &lt;= points1.minY || points1.list.all { set1 -> points2.list.all { set2 -> set1.list[set1.maxX][0] &lt;= set2.list[set2.minX][0] || set2.list[set2.maxX][0] &lt;= set1.list[set1.minX][0] || set1.list[set1.maxY][1] &lt;= set2.list[set2.minY][1] || set2.list[set2.maxY][1] &lt;= set1.list[set1.minY][1] } }</ID>
+    <ID>ComplexCondition:MatrixDecompose.kt$next != null &amp;&amp; next.name == "rotate" &amp;&amp; next.data[0] != 180.0 &amp;&amp; next.data[0] != -180.0 &amp;&amp; next.data[0] != 0.0 &amp;&amp; next.data[1] == 0.0 &amp;&amp; next.data[2] == 0.0</ID>
+    <ID>CyclomaticComplexMethod:ApplyTransforms.kt$@Suppress("CyclomaticComplexity", "LongMethod") private fun applyMatrixToPathData(pathData: List&lt;PathDataItem>, matrix: DoubleArray)</ID>
+    <ID>CyclomaticComplexMethod:ApplyTransforms.kt$@Suppress("ReturnCount", "CyclomaticComplexity", "LongMethod") private fun applyTransformToElement( node: XastElement, parentNode: XastParent?, params: ApplyTransformsParams, ): VisitState</ID>
+    <ID>CyclomaticComplexMethod:ConvertPathData.kt$ConvertPathData.Companion$@Suppress("CyclomaticComplexity") private fun resolveParams( pluginParams: PluginParams?, defaults: ConvertPathDataParams, ): ConvertPathDataParams</ID>
+    <ID>CyclomaticComplexMethod:ConvertPathData.kt$ConvertPathData.Companion$@Suppress("ReturnCount") private fun processElement( node: XastElement, effectiveParams: ConvertPathDataParams, stylesheet: Stylesheet, ): VisitState</ID>
+    <ID>CyclomaticComplexMethod:ConvertPathData.kt$ConvertPathData.Companion$@Suppress("ReturnCount", "LongParameterList") private fun trySmoothShorthand( command: Char, data: MutableList&lt;Double>, prev: PathDataItem, error: Double, item: PathDataItem, qControlPoint: DoubleArray?, ): Pair&lt;Char, MutableList&lt;Double>>?</ID>
+    <ID>CyclomaticComplexMethod:ConvertPathData.kt$ConvertPathData.Companion$@Suppress("ReturnCount", "LongParameterList") private fun tryStraightCurve( command: Char, data: MutableList&lt;Double>, sdata: MutableList&lt;Double>, error: Double, prev: PathDataItem, next: PathDataItem?, sagitta: Double?, ): Pair&lt;Char, MutableList&lt;Double>>?</ID>
+    <ID>CyclomaticComplexMethod:ConvertStyleToAttrs.kt$ConvertStyleToAttrs$private fun processStyleAttribute( node: svgokt.domain.XastElement, style: String, params: Params, )</ID>
+    <ID>CyclomaticComplexMethod:ConvertTransform.kt$private fun convertToShorts( transforms: MutableList&lt;TransformItem>, params: TransformParams, ): List&lt;TransformItem></ID>
+    <ID>CyclomaticComplexMethod:ConvertTransform.kt$private fun removeUseless(transforms: List&lt;TransformItem>): List&lt;TransformItem></ID>
+    <ID>CyclomaticComplexMethod:MatrixDecompose.kt$private fun optimize( roundedTransforms: List&lt;TransformItem>, rawTransforms: List&lt;TransformItem>, ): List&lt;TransformItem></ID>
+    <ID>CyclomaticComplexMethod:RemoveHiddenElems.kt$RemoveHiddenElems$private fun tryRemoveZeroSized( node: XastElement, parentNode: XastParent?, params: Params, state: PluginState, ): Boolean</ID>
+    <ID>CyclomaticComplexMethod:RemoveXlink.kt$private fun cleanupOnExit( node: XastElement, xlinkPrefixes: MutableList&lt;String>, overriddenPrefixes: MutableList&lt;String>, usedInLegacyElement: List&lt;String>, includeLegacy: Boolean, )</ID>
     <ID>CyclomaticComplexMethod:SaxParser.kt$SaxParser$private suspend fun closeTag()</ID>
     <ID>CyclomaticComplexMethod:SaxParser.kt$SaxParser$suspend fun write(chunk: String?): SaxParser</ID>
     <ID>CyclomaticComplexMethod:SaxParser.kt$private suspend fun attrib(parser: SaxParser)</ID>
@@ -10,9 +31,44 @@
     <ID>ForbiddenComment:SaxParser.kt$// TODO: Maybe only num.toChar().toString() works well...</ID>
     <ID>ForbiddenComment:SaxParser.kt$SaxParser$// TODO: Find a better way to solve this.</ID>
     <ID>ForbiddenComment:SaxParser.kt$SaxParser$// TODO: is this right?</ID>
+    <ID>LargeClass:ConvertPathData.kt$ConvertPathData$Companion</ID>
     <ID>LargeClass:SaxParser.kt$SaxParser</ID>
     <ID>LongMethod:SaxParser.kt$SaxParser$suspend fun write(chunk: String?): SaxParser</ID>
+    <ID>LongParameterList:Intersects.kt$( x1: Double, y1: Double, rx: Double, ry: Double, angle: Double, largeArcFlag: Double, sweepFlag: Double, x2: Double, y2: Double, recursive: DoubleArray?, )</ID>
+    <ID>LoopWithTooManyJumpStatements:CleanupEnableBackground.kt$CleanupEnableBackground$for</ID>
+    <ID>LoopWithTooManyJumpStatements:ComputeStyle.kt$for</ID>
+    <ID>LoopWithTooManyJumpStatements:ConvertPathData.kt$ConvertPathData.Companion$while</ID>
+    <ID>LoopWithTooManyJumpStatements:InlineStyles.kt$InlineStyles.Companion$for</ID>
+    <ID>LoopWithTooManyJumpStatements:InlineStyles.kt$InlineStyles.Companion$while</ID>
+    <ID>LoopWithTooManyJumpStatements:MatrixDecompose.kt$while</ID>
+    <ID>LoopWithTooManyJumpStatements:MinifyStyles.kt$MinifyStyles$for</ID>
+    <ID>LoopWithTooManyJumpStatements:MinifyStyles.kt$MinifyStyles.Companion$while</ID>
+    <ID>LoopWithTooManyJumpStatements:PrefixIds.kt$PrefixIds$while</ID>
+    <ID>LoopWithTooManyJumpStatements:RemoveHiddenElems.kt$RemoveHiddenElems$for</ID>
+    <ID>LoopWithTooManyJumpStatements:RemoveUnknownsAndDefaults.kt$RemoveUnknownsAndDefaults$for</ID>
+    <ID>LoopWithTooManyJumpStatements:RemoveXlink.kt$for</ID>
+    <ID>LoopWithTooManyJumpStatements:ReusePaths.kt$ReusePaths$for</ID>
     <ID>LoopWithTooManyJumpStatements:SaxParser.kt$SaxParser$while</ID>
+    <ID>MagicNumber:ApplyTransforms.kt$0.5</ID>
+    <ID>MagicNumber:ApplyTransforms.kt$3</ID>
+    <ID>MagicNumber:ApplyTransforms.kt$4</ID>
+    <ID>MagicNumber:ApplyTransforms.kt$5</ID>
+    <ID>MagicNumber:ApplyTransforms.kt$90.0</ID>
+    <ID>MagicNumber:CleanupEnableBackground.kt$CleanupEnableBackground$3</ID>
+    <ID>MagicNumber:CleanupIds.kt$CleanupIds.Companion$3</ID>
+    <ID>MagicNumber:CleanupIds.kt$CleanupIds.Companion$4</ID>
+    <ID>MagicNumber:ConvertPathData.kt$0.5</ID>
+    <ID>MagicNumber:ConvertPathData.kt$ConvertPathData.Companion$0.25</ID>
+    <ID>MagicNumber:ConvertPathData.kt$ConvertPathData.Companion$0.5</ID>
+    <ID>MagicNumber:ConvertPathData.kt$ConvertPathData.Companion$0.75</ID>
+    <ID>MagicNumber:ConvertPathData.kt$ConvertPathData.Companion$10</ID>
+    <ID>MagicNumber:ConvertPathData.kt$ConvertPathData.Companion$1e-3</ID>
+    <ID>MagicNumber:ConvertPathData.kt$ConvertPathData.Companion$1e15</ID>
+    <ID>MagicNumber:ConvertPathData.kt$ConvertPathData.Companion$3</ID>
+    <ID>MagicNumber:ConvertPathData.kt$ConvertPathData.Companion$4</ID>
+    <ID>MagicNumber:ConvertPathData.kt$ConvertPathData.Companion$5</ID>
+    <ID>MagicNumber:ConvertPathData.kt$ConvertPathData.Companion$6</ID>
+    <ID>MagicNumber:ConvertPathData.kt$ConvertPathData.Companion$96</ID>
     <ID>MagicNumber:Sax.kt$Sax$1024</ID>
     <ID>MagicNumber:Sax.kt$Sax$160</ID>
     <ID>MagicNumber:Sax.kt$Sax$161</ID>
@@ -263,17 +319,70 @@
     <ID>MagicNumber:Sax.kt$Sax$9827</ID>
     <ID>MagicNumber:Sax.kt$Sax$9829</ID>
     <ID>MagicNumber:Sax.kt$Sax$9830</ID>
+    <ID>MagicNumber:StringifyPathData.kt$0.5</ID>
+    <ID>MagicNumber:TransformMath.kt$10.0</ID>
+    <ID>MaxLineLength:CollectStylesheet.kt$private</ID>
     <ID>MaxLineLength:SaxParser.kt$"""[#:_A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD\u00B7\u0300-\u036F\u203F-\u2040.\d-]""".toRegex()</ID>
     <ID>MaxLineLength:SaxParser.kt$"""[#:_A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD]""".toRegex()</ID>
     <ID>MaxLineLength:SaxParser.kt$"""[:_A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD\u00B7\u0300-\u036F\u203F-\u2040.\d-]""".toRegex()</ID>
     <ID>MaxLineLength:SaxParser.kt$"""[:_A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD]""".toRegex()</ID>
+    <ID>MaximumLineLength:CollectStylesheet.kt$private</ID>
     <ID>MaximumLineLength:SaxParser.kt$ </ID>
+    <ID>MayBeConst:ConvertStyleToAttrs.kt$ConvertStyleToAttrs$// Quoted strings private val rSingleQuotes = """'(?:[^'\n\r\\]|""" + R_ESCAPE + """)*?(?:'|$)"""</ID>
+    <ID>MayBeConst:ConvertStyleToAttrs.kt$ConvertStyleToAttrs$private val rQuotes = "\"(?:[^\"\\n\\r\\\\]|" + R_ESCAPE + ")*?(?:\"|$)"</ID>
     <ID>MayBeConst:Sax.kt$Sax$// When we pass the MAX_BUFFER_LENGTH position, start checking for buffer overruns. // When we check, schedule the next check for MAX_BUFFER_LENGTH - (max(buffer lengths)), // since that's the earliest that a buffer overrun could occur. This way, checks are // as rare as required, but as often as necessary to ensure never crossing this bound. // Furthermore, buffers are only tested at most once per write(), so passing a very // large string into write() might have undesirable effects, but this is manageable by // the caller, so it is assumed to be safe. Thus, a call to write() may, in the extreme // edge case, result in creating at most one complete copy of the string passed in. // Set to Infinity to have unlimited buffers. val MaxBufferLength = 64 * 1024</ID>
+    <ID>NestedBlockDepth:ApplyTransforms.kt$@Suppress("CyclomaticComplexity", "LongMethod") private fun applyMatrixToPathData(pathData: List&lt;PathDataItem>, matrix: DoubleArray)</ID>
+    <ID>NestedBlockDepth:ApplyTransforms.kt$@Suppress("ReturnCount", "CyclomaticComplexity", "LongMethod") private fun applyTransformToElement( node: XastElement, parentNode: XastParent?, params: ApplyTransformsParams, ): VisitState</ID>
+    <ID>NestedBlockDepth:ComputeStyle.kt$fun computeStyle( stylesheet: Stylesheet, node: XastElement, ): Map&lt;String, ComputedStyles></ID>
+    <ID>NestedBlockDepth:ConvertPathData.kt$ConvertPathData.Companion$@Suppress("ReturnCount", "LongParameterList") private fun trySmoothShorthand( command: Char, data: MutableList&lt;Double>, prev: PathDataItem, error: Double, item: PathDataItem, qControlPoint: DoubleArray?, ): Pair&lt;Char, MutableList&lt;Double>>?</ID>
+    <ID>NestedBlockDepth:InlineStyles.kt$InlineStyles.Companion$private fun parseDeclarations(text: String): List&lt;Declaration></ID>
+    <ID>NestedBlockDepth:InlineStyles.kt$InlineStyles.Companion$private fun parseInlineDeclarations(style: String): MutableList&lt;Declaration></ID>
+    <ID>NestedBlockDepth:MatrixDecompose.kt$private fun optimize( roundedTransforms: List&lt;TransformItem>, rawTransforms: List&lt;TransformItem>, ): List&lt;TransformItem></ID>
+    <ID>NestedBlockDepth:MinifyStyles.kt$MinifyStyles.Companion$private fun mergeShorthandInDeclarations(declarations: String): String</ID>
     <ID>NestedBlockDepth:SaxParser.kt$SaxParser$suspend fun write(chunk: String?): SaxParser</ID>
     <ID>NestedBlockDepth:SaxParser.kt$private suspend fun attrib(parser: SaxParser)</ID>
+    <ID>ReturnCount:ApplyTransforms.kt$private fun removeLeadingZeroForTransform(value: Double): String</ID>
+    <ID>ReturnCount:ApplyTransforms.kt$private fun resolveInheritedAttribute( node: XastElement, parentNode: XastParent?, name: String, ): String?</ID>
+    <ID>ReturnCount:CleanupEnableBackground.kt$CleanupEnableBackground$private fun processStyleAttribute( styleValue: String, hasFilter: Boolean, node: XastElement, ): StyleResult</ID>
+    <ID>ReturnCount:CollapseGroups.kt$CollapseGroups$private fun canMergeAttributes(group: XastElement, child: XastElement): Boolean</ID>
+    <ID>ReturnCount:CollectStylesheet.kt$@Suppress("LoopWithTooManyJumpStatements") private fun parseAtRule(css: String, start: Int, dynamic: Boolean, rules: MutableList&lt;StylesheetRule>): Int</ID>
+    <ID>ReturnCount:ConvertColors.kt$ConvertColors$private fun convertToCurrentColor( value: String, params: Params, maskCounter: Int, ): String</ID>
+    <ID>ReturnCount:ConvertPathData.kt$ConvertPathData.Companion$private fun calculateSagitta(data: List&lt;Double>): Double?</ID>
+    <ID>ReturnCount:ConvertPathData.kt$ConvertPathData.Companion$private fun findCircle( curve: List&lt;Double>, arcThreshold: Double, arcTolerance: Double, error: Double, ): Circle?</ID>
+    <ID>ReturnCount:ConvertPathData.kt$ConvertPathData.Companion$private fun getIntersection(coords: DoubleArray): DoubleArray?</ID>
+    <ID>ReturnCount:ConvertPathData.kt$ConvertPathData.Companion$private fun isCurveStraightLine(data: List&lt;Double>, error: Double): Boolean</ID>
+    <ID>ReturnCount:CssSelectParser.kt$internal fun matchesSelectorListItem( element: XastElement, selectorItem: SelectorListItem, parents: Map&lt;XastChild, XastParent>?, ): Boolean</ID>
+    <ID>ReturnCount:CssSelectParser.kt$private fun matchesAttribute(element: XastElement, selector: Selector.Attribute): Boolean</ID>
+    <ID>ReturnCount:InlineStyles.kt$InlineStyles.Companion$@Suppress("LongParameterList") private fun parseAtRule( css: String, startIndex: Int, useMqs: List&lt;String>, usePseudos: List&lt;String>, selectors: MutableList&lt;CssSelector>, atRules: MutableList&lt;AtRule>, skippedRules: MutableList&lt;SkippedRule>, ): Int</ID>
+    <ID>ReturnCount:Intersects.kt$private fun gjkIntersects(hull1: ConvexPoint, hull2: ConvexPoint): Boolean</ID>
+    <ID>ReturnCount:Js2Transform.kt$internal fun removeLeadingZero(value: Double): String</ID>
+    <ID>ReturnCount:MatrixDecompose.kt$private fun decomposeQRAB(matrix: TransformItem): List&lt;TransformItem>?</ID>
+    <ID>ReturnCount:MatrixDecompose.kt$private fun decomposeQRCD(matrix: TransformItem): List&lt;TransformItem>?</ID>
+    <ID>ReturnCount:MergePaths.kt$MergePaths.MergeState$fun processChild(child: XastChild)</ID>
+    <ID>ReturnCount:MergePaths.kt$MergePaths.MergeState$private fun hasUnsafeMergeStyles(child: XastElement): Boolean</ID>
+    <ID>ReturnCount:RemoveAttributesBySelector.kt$RemoveAttributesBySelector$private fun matchesSelector( elementName: String, attributes: Map&lt;String, String>, selector: String, ): Boolean</ID>
+    <ID>ReturnCount:RemoveHiddenElems.kt$RemoveHiddenElems$private fun canRemoveNonRenderingNode( node: XastElement, allReferences: Set&lt;String>, ): Boolean</ID>
+    <ID>ReturnCount:RemoveHiddenElems.kt$RemoveHiddenElems$private fun getOpacity(node: XastElement): String?</ID>
+    <ID>ReturnCount:RemoveHiddenElems.kt$RemoveHiddenElems$private fun onEnter( node: XastElement, parentNode: XastParent?, params: Params, state: PluginState, stylesheet: svgokt.domain.css.Stylesheet, ): VisitState</ID>
+    <ID>ReturnCount:RemoveUselessStrokeAndFill.kt$RemoveUselessStrokeAndFill$fun walk(children: List&lt;XastChild>): Boolean</ID>
+    <ID>ReturnCount:RemoveUselessStrokeAndFill.kt$RemoveUselessStrokeAndFill$private fun resolveInheritedAttribute( node: XastElement, parentNode: XastParent?, attrName: String, ): String?</ID>
     <ID>ReturnCount:SaxParser.kt$SaxParser$suspend fun write(chunk: String?): SaxParser</ID>
     <ID>ReturnCount:SaxParser.kt$private suspend fun parseEntity(parser: SaxParser): String</ID>
+    <ID>ReturnCount:SortAttrs.kt$private fun compareAttrs( aName: String, bName: String, order: List&lt;String>, xmlnsOrder: String, ): Int</ID>
+    <ID>ReturnCount:SortAttrs.kt$private fun getNsPriority(attrName: String, xmlnsOrder: String): Int</ID>
+    <ID>ReturnCount:SortDefsChildren.kt$private fun compareDefsChildren( a: XastChild, b: XastChild, frequencies: Map&lt;String, Int>, ): Int</ID>
+    <ID>SwallowedException:ComputeStyle.kt$@Suppress("TooGenericExceptionCaught") e: Exception</ID>
+    <ID>SwallowedException:InlineStyles.kt$InlineStyles$@Suppress("TooGenericExceptionCaught") e: Exception</ID>
+    <ID>TooManyFunctions:ApplyTransforms.kt$svgokt.plugins.builtin.ApplyTransforms.kt</ID>
+    <ID>TooManyFunctions:ConvertPathData.kt$ConvertPathData$Companion</ID>
+    <ID>TooManyFunctions:Intersects.kt$svgokt.path.Intersects.kt</ID>
+    <ID>TooManyFunctions:PrefixIds.kt$PrefixIds : Plugin</ID>
     <ID>TooManyFunctions:SaxParser.kt$SaxParser</ID>
+    <ID>UnusedParameter:ApplyTransforms.kt$root: XastRoot</ID>
+    <ID>UnusedParameter:CollectStylesheet.kt$dynamic: Boolean</ID>
+    <ID>UnusedParameter:ConvertPathData.kt$ConvertPathData.Companion$precision: Int</ID>
+    <ID>UnusedParameter:RemoveHiddenElems.kt$RemoveHiddenElems$stylesheet: svgokt.domain.css.Stylesheet</ID>
+    <ID>UnusedPrivateProperty:CollapseGroups.kt$CollapseGroups$val computed = computeStyle(stylesheet, node)</ID>
     <ID>UseCheckOrError:SaxParser.kt$SaxParser$throw IllegalStateException("not expected state")</ID>
   </CurrentIssues>
 </SmellBaseline>

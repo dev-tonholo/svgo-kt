@@ -503,7 +503,14 @@ object SvgElements {
             "feImage",
             SvgElementConfig(
                 attrsGroups = setOf("core", "presentation", "filterPrimitive", "xlink"),
-                attrs = setOf("class", "externalResourcesRequired", "href", "preserveAspectRatio", "style", "xlink:href"),
+                attrs = setOf(
+                    "class",
+                    "externalResourcesRequired",
+                    "href",
+                    "preserveAspectRatio",
+                    "style",
+                    "xlink:href"
+                ),
                 defaults = mapOf("preserveAspectRatio" to "xMidYMid meet"),
                 content = setOf("animate", "animateTransform", "set"),
             )
@@ -744,7 +751,9 @@ object SvgElements {
             SvgElementConfig(
                 attrsGroups = setOf("core", "presentation"),
                 attrs = setOf("class", "d", "horiz-adv-x", "style", "vert-adv-y", "vert-origin-x", "vert-origin-y"),
-                deprecated = DeprecatedAttrs(unsafe = setOf("horiz-adv-x", "vert-adv-y", "vert-origin-x", "vert-origin-y")),
+                deprecated = DeprecatedAttrs(
+                    unsafe = setOf("horiz-adv-x", "vert-adv-y", "vert-origin-x", "vert-origin-y")
+                ),
                 contentGroups = setOf("animation", "descriptive", "paintServer", "shape", "structural"),
                 content = setOf("a", "altGlyphDef", "clipPath", "color-profile", "cursor", "filter", "font-face", "font", "foreignObject", "image", "marker", "mask", "pattern", "script", "style", "switch", "text", "view"),
             )
@@ -855,7 +864,9 @@ object SvgElements {
             SvgElementConfig(
                 attrsGroups = setOf("core", "presentation"),
                 attrs = setOf("class", "d", "horiz-adv-x", "style", "vert-adv-y", "vert-origin-x", "vert-origin-y"),
-                deprecated = DeprecatedAttrs(unsafe = setOf("horiz-adv-x", "vert-adv-y", "vert-origin-x", "vert-origin-y")),
+                deprecated = DeprecatedAttrs(
+                    unsafe = setOf("horiz-adv-x", "vert-adv-y", "vert-origin-x", "vert-origin-y")
+                ),
                 contentGroups = setOf("animation", "descriptive", "paintServer", "shape", "structural"),
                 content = setOf("a", "altGlyphDef", "clipPath", "color-profile", "cursor", "filter", "font-face", "font", "foreignObject", "image", "marker", "mask", "pattern", "script", "style", "switch", "text", "view"),
             )
@@ -1101,7 +1112,13 @@ object SvgElements {
             "view",
             SvgElementConfig(
                 attrsGroups = setOf("core"),
-                attrs = setOf("externalResourcesRequired", "preserveAspectRatio", "viewBox", "viewTarget", "zoomAndPan"),
+                attrs = setOf(
+                    "externalResourcesRequired",
+                    "preserveAspectRatio",
+                    "viewBox",
+                    "viewTarget",
+                    "zoomAndPan"
+                ),
                 deprecated = DeprecatedAttrs(unsafe = setOf("viewTarget", "zoomAndPan")),
                 contentGroups = setOf("descriptive"),
             )
