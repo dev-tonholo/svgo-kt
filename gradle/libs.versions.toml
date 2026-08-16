@@ -5,7 +5,7 @@ kss = "1.0.3"
 xmlutil = "0.91.3"
 kotlin-coroutines = "1.10.2"
 vanniktech-maven-publish = "0.36.0"
-kover = "0.9.1"
+kover = "0.9.9"
 dokka = "2.2.0"
 kotlinx-benchmark = "0.4.13"
 # svgo-kt's Maven coordinate version is composed from two halves:
