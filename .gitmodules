@@ -1,3 +1,3 @@
 [submodule "svgo"]
 	path = svgo
-	url = git@github.com:rafaeltonholo/svgo.git
+	url = https://github.com/rafaeltonholo/svgo.git
