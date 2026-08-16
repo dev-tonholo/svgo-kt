@@ -35,14 +35,14 @@ jobs:
         # so they fall outside this workflow's scope.
         language: ["java-kotlin"]
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
           persist-credentials: false
       - uses: ./.github/actions/setup
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@4e828ff8d448a8a6e532957b1811f387a63867e8 # v3.30.4
+        uses: github/codeql-action/init@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v3.30.4
         with:
           languages: ${{ matrix.language }}
           queries: security-and-quality
@@ -51,6 +51,6 @@ jobs:
         run: ./gradlew :svgo-kt:compileKotlinJvm :svgo-kt:compileTestKotlinJvm
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@4e828ff8d448a8a6e532957b1811f387a63867e8 # v3.30.4
+        uses: github/codeql-action/analyze@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v3.30.4
         with:
           category: "/language:${{ matrix.language }}"
