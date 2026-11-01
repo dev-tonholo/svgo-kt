@@ -49,7 +49,7 @@ jobs:
 
       - name: Upload test reports on failure
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v4.6.2
         with:
           name: test-reports-${{ matrix.os }}
           path: |
@@ -71,7 +71,7 @@ jobs:
 
       - name: Upload detekt reports on failure
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v4.6.2
         with:
           name: detekt-reports
           path: svgo-kt/build/reports/detekt/
@@ -91,14 +91,14 @@ jobs:
         run: ./gradlew :svgo-kt:koverXmlReport :svgo-kt:koverHtmlReport
 
       - name: Upload Kover HTML report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v4.6.2
         with:
           name: kover-html-report
           path: svgo-kt/build/reports/kover/html/
           retention-days: 14
 
       - name: Upload Kover XML report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v4.6.2
         with:
           name: kover-xml-report
           path: svgo-kt/build/reports/kover/report.xml
